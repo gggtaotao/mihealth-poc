@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mi Health WebView Permission PoC</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #1b2430;
+      --muted: #5b6575;
+      --accent: #0b6bcb;
+      --ok: #0b8f55;
+      --err: #b3261e;
+      --border: #d9e1ee;
+    }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "PingFang SC", sans-serif;
+      background: radial-gradient(circle at top, #eef5ff 0, var(--bg) 55%);
+      color: var(--text);
+    }
+    main {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 24px 18px 48px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 14px 40px rgba(18, 43, 70, 0.08);
+    }
+    h1 {
+      font-size: 28px;
+      margin: 0 0 10px;
+    }
+    p {
+      line-height: 1.6;
+      color: var(--muted);
+    }
+    button {
+      appearance: none;
+      border: none;
+      border-radius: 999px;
+      padding: 12px 18px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-top: 10px;
+    }
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: #0f1720;
+      color: #d5dfef;
+      border-radius: 12px;
+      padding: 14px;
+      min-height: 220px;
+      overflow: auto;
+    }
+    .ok { color: var(--ok); }
+    .err { color: var(--err); }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="card">
+      <h1>Mi Health WebView Permission PoC</h1>
+      <p>这个页面会在 WebView 中尝试请求摄像头和麦克风权限，并把结果打印到日志框里。若宿主自动批准 WebView 的 PermissionRequest，且应用已具备系统权限，则页面应能拿到媒体流。</p>
+      <button id="start">请求 camera + mic</button>
+      <button id="stop">停止流</button>
+      <p id="status">状态：等待操作</p>
+      <pre id="log"></pre>
+    </div>
+  </main>
+  <script>
+    const logEl = document.getElementById("log");
+    const statusEl = document.getElementById("status");
+    let stream = null;
+
+    function log(message, cls) {
+      const line = `[${new Date().toLocaleTimeString()}] ${message}`;
+      const div = document.createElement("div");
+      div.textContent = line;
+      if (cls) div.className = cls;
+      logEl.appendChild(div);
+      console.log(line);
+    }
+
+    async function startCapture() {
+      log("navigator.mediaDevices.getUserMedia({ video: true, audio: true })");
+      statusEl.textContent = "状态：请求中";
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        const tracks = stream.getTracks().map((t) => `${t.kind}:${t.label || "(no label)"}`);
+        statusEl.innerHTML = '状态：<span class="ok">成功拿到媒体流</span>';
+        log(`SUCCESS: tracks=${tracks.join(", ")}`, "ok");
+      } catch (err) {
+        statusEl.innerHTML = '状态：<span class="err">请求失败</span>';
+        log(`ERROR: ${err && err.name ? err.name : "UnknownError"} ${err && err.message ? err.message : ""}`, "err");
+      }
+    }
+
+    function stopCapture() {
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+        log("Stopped all tracks");
+        stream = null;
+        statusEl.textContent = "状态：媒体流已停止";
+      } else {
+        log("No active stream");
+      }
+    }
+
+    document.getElementById("start").addEventListener("click", startCapture);
+    document.getElementById("stop").addEventListener("click", stopCapture);
+
+    log(`Loaded: ${location.href}`);
+    log(`isSecureContext=${window.isSecureContext}`);
+    log(`userAgent=${navigator.userAgent}`);
+  </script>
+</body>
+</html>
