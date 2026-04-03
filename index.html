@@ -9,13 +9,11 @@
       color-scheme: dark;
       --bg: #0f172a;
       --panel: #111827;
-      --panel-2: #1f2937;
       --text: #e5e7eb;
       --muted: #94a3b8;
       --ok: #22c55e;
       --warn: #f59e0b;
       --err: #ef4444;
-      --accent: #38bdf8;
       --border: rgba(148, 163, 184, 0.18);
     }
 
@@ -205,9 +203,8 @@
     <section class="hero">
       <h1>BOSS直聘 WebView 摄像头/麦克风 PoC</h1>
       <p>
-        该页面用于验证 <strong>com.hpbr.bosszhipin</strong> 的 WebView 在 App 已具备 Android 摄像头/麦克风权限的情况下，
-        是否会对当前网页直接放行 <code>getUserMedia()</code> / <code>MediaRecorder</code>。
-        页面会在加载后自动申请摄像头和麦克风，并支持拍照、录音、播放录音结果。
+        本页拆成 3 组独立测试：<strong>仅摄像头</strong>、<strong>仅麦克风</strong>、<strong>摄像头+麦克风</strong>。
+        这样可以区分是 VIDEO_CAPTURE 路径、AUDIO_CAPTURE 路径，还是两者一起申请时被宿主拒绝。
       </p>
     </section>
 
@@ -218,15 +215,18 @@
           <li><span class="label">URL</span><span id="currentUrl">-</span></li>
           <li><span class="label">Secure Context</span><span id="secureState">-</span></li>
           <li><span class="label">User-Agent</span><span id="ua">-</span></li>
-          <li><span class="label">媒体状态</span><span id="mediaStatus">等待初始化</span></li>
+          <li><span class="label">当前测试模式</span><span id="currentMode">尚未开始</span></li>
+          <li><span class="label">媒体状态</span><span id="mediaStatus">等待手动触发测试</span></li>
           <li><span class="label">录音状态</span><span id="recordStatus">未开始</span></li>
         </ul>
       </section>
 
       <section class="panel">
-        <h2>操作</h2>
+        <h2>测试操作</h2>
         <div class="actions">
-          <button id="btnRequest">重新申请摄像头+麦克风</button>
+          <button id="btnVideoOnly">测试：仅摄像头</button>
+          <button id="btnAudioOnly" class="success">测试：仅麦克风</button>
+          <button id="btnVideoAudio" class="warn">测试：摄像头+麦克风</button>
           <button id="btnSnapshot" class="secondary" disabled>抓拍当前画面</button>
           <button id="btnRecord" class="success" disabled>开始录音</button>
           <button id="btnStopRecord" class="warn" disabled>停止录音</button>
@@ -234,11 +234,12 @@
           <button id="btnClear" class="secondary">清空日志</button>
         </div>
         <div class="note">
-          <strong>验证成功的典型表现：</strong>
-          在 BOSS 直聘 WebView 中打开本页后，页面能直接弹起/拿到摄像头与麦克风，出现实时预览、抓拍成功，且录音可开始并回放。
-          若日志显示 <code>isSecureContext = false</code> 或因浏览器策略被拒绝，则说明是页面安全上下文限制，而不一定是 App 权限逻辑失效。
+          <strong>如何看结果：</strong><br />
+          1. 如果 <code>audio-only</code> 成功，但 <code>video-only</code> 失败，说明 BOSS 的 VIDEO_CAPTURE 路径有额外限制。<br />
+          2. 如果三种都失败，说明更像是 URL / 域名白名单 / 场景状态 统一拦截。<br />
+          3. 如果 <code>video-only</code> 也失败，不代表网页真的没申请音频；因为宿主可能把 VIDEO_CAPTURE 绑到了 CAMERA + RECORD_AUDIO。
         </div>
-        <div class="foot">建议同时结合 adb 预先授予 CAMERA / RECORD_AUDIO，以验证“网页未按 origin 独立授权而被直接 grant”的场景。</div>
+        <div class="foot">本版本不再自动申请权限，避免页面加载时直接触发一次失败；请手动逐个测试。</div>
       </section>
     </div>
 
@@ -246,17 +247,17 @@
       <h2>预览与录音结果</h2>
       <div class="preview-grid">
         <div class="preview-card">
-          <h3>摄像头实时画面</h3>
+          <h3>实时画面</h3>
           <video id="video" autoplay playsinline muted></video>
         </div>
         <div class="preview-card">
-          <h3>自动/手动抓拍结果</h3>
+          <h3>抓拍结果</h3>
           <canvas id="snapshot" width="640" height="480"></canvas>
         </div>
         <div class="preview-card">
           <h3>录音回放</h3>
           <audio id="audioPlayback" controls></audio>
-          <div class="foot">录音仅使用当前流中的音频轨道，不额外申请新权限。</div>
+          <div class="foot">录音按钮仅在当前流里存在音频轨道时可用。</div>
         </div>
       </div>
     </section>
@@ -272,18 +273,61 @@
       currentUrl: document.getElementById('currentUrl'),
       secureState: document.getElementById('secureState'),
       ua: document.getElementById('ua'),
+      currentMode: document.getElementById('currentMode'),
       mediaStatus: document.getElementById('mediaStatus'),
       recordStatus: document.getElementById('recordStatus'),
       video: document.getElementById('video'),
       snapshot: document.getElementById('snapshot'),
       audioPlayback: document.getElementById('audioPlayback'),
       log: document.getElementById('log'),
-      btnRequest: document.getElementById('btnRequest'),
+      btnVideoOnly: document.getElementById('btnVideoOnly'),
+      btnAudioOnly: document.getElementById('btnAudioOnly'),
+      btnVideoAudio: document.getElementById('btnVideoAudio'),
       btnSnapshot: document.getElementById('btnSnapshot'),
       btnRecord: document.getElementById('btnRecord'),
       btnStopRecord: document.getElementById('btnStopRecord'),
       btnStopAll: document.getElementById('btnStopAll'),
       btnClear: document.getElementById('btnClear')
+    };
+
+    const presets = {
+      videoOnly: {
+        label: '仅摄像头',
+        constraints: {
+          video: {
+            facingMode: 'user',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        }
+      },
+      audioOnly: {
+        label: '仅麦克风',
+        constraints: {
+          video: false,
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        }
+      },
+      videoAudio: {
+        label: '摄像头 + 麦克风',
+        constraints: {
+          video: {
+            facingMode: 'user',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        }
+      }
     };
 
     let mediaStream = null;
@@ -292,6 +336,7 @@
     let recordMimeType = '';
     let snapshotTimer = null;
     let audioObjectUrl = '';
+    let currentModeKey = '';
 
     function ts() {
       return new Date().toLocaleTimeString();
@@ -320,6 +365,11 @@
       el.recordStatus.className = cls || '';
     }
 
+    function setMode(key) {
+      currentModeKey = key || '';
+      el.currentMode.textContent = key && presets[key] ? presets[key].label : '尚未开始';
+    }
+
     function refreshEnv() {
       el.currentUrl.textContent = location.href;
       el.secureState.textContent = String(window.isSecureContext);
@@ -327,17 +377,39 @@
       el.ua.textContent = navigator.userAgent;
     }
 
-    function setButtons(options = {}) {
+    function getSupportInfo() {
+      const legacy = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+      return {
+        hasNavigatorMediaDevices: !!navigator.mediaDevices,
+        hasModernGetUserMedia: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia),
+        hasLegacyGetUserMedia: !!legacy,
+        isSecureContext: window.isSecureContext,
+        href: location.href
+      };
+    }
+
+    function getUserMediaCompat(constraints) {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        return navigator.mediaDevices.getUserMedia(constraints);
+      }
+      const legacy = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+      if (legacy) {
+        return new Promise((resolve, reject) => {
+          legacy.call(navigator, constraints, resolve, reject);
+        });
+      }
+      return Promise.reject(new Error('GET_USER_MEDIA_UNAVAILABLE'));
+    }
+
+    function setButtons() {
       const hasStream = !!mediaStream;
+      const hasVideoTrack = hasStream && mediaStream.getVideoTracks().length > 0;
       const hasAudioTrack = hasStream && mediaStream.getAudioTracks().length > 0;
       const recording = recorder && recorder.state === 'recording';
-      el.btnSnapshot.disabled = !hasStream;
+      el.btnSnapshot.disabled = !hasVideoTrack;
       el.btnStopAll.disabled = !hasStream;
       el.btnRecord.disabled = !hasAudioTrack || recording;
       el.btnStopRecord.disabled = !recording;
-      if (typeof options.requestDisabled === 'boolean') {
-        el.btnRequest.disabled = options.requestDisabled;
-      }
     }
 
     function cleanupAudioUrl() {
@@ -345,6 +417,17 @@
         URL.revokeObjectURL(audioObjectUrl);
         audioObjectUrl = '';
       }
+    }
+
+    function clearCanvas() {
+      const canvas = el.snapshot;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '20px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('等待抓拍', canvas.width / 2, canvas.height / 2);
     }
 
     function getPreferredAudioMimeType() {
@@ -385,7 +468,7 @@
       log('已停止所有摄像头/麦克风轨道');
     }
 
-    async function captureSnapshot(reason = 'manual') {
+    function captureSnapshot(reason = 'manual') {
       if (!mediaStream || !el.video.videoWidth || !el.video.videoHeight) {
         log('抓拍失败：当前没有可用视频帧');
         return;
@@ -397,7 +480,8 @@
       ctx.drawImage(el.video, 0, 0, canvas.width, canvas.height);
       log(reason === 'auto' ? '已自动抓拍一帧画面' : '已手动抓拍当前画面', {
         width: canvas.width,
-        height: canvas.height
+        height: canvas.height,
+        mode: currentModeKey
       });
     }
 
@@ -418,7 +502,7 @@
         readyState: track.readyState,
         settings: typeof track.getSettings === 'function' ? track.getSettings() : {}
       }));
-      log('媒体轨道信息', { videoTracks, audioTracks });
+      log('媒体轨道信息', { mode: currentModeKey, videoTracks, audioTracks });
 
       if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
         navigator.mediaDevices.enumerateDevices()
@@ -436,17 +520,24 @@
       }
     }
 
-    async function requestMedia() {
+    async function requestMedia(modeKey) {
+      const preset = presets[modeKey];
+      if (!preset) {
+        log('未知测试模式: ' + modeKey);
+        return;
+      }
+
       refreshEnv();
+      setMode(modeKey);
       cleanupAudioUrl();
       el.audioPlayback.removeAttribute('src');
       el.audioPlayback.load();
-      setButtons({ requestDisabled: true });
 
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const supportInfo = getSupportInfo();
+
+      if (!supportInfo.hasModernGetUserMedia && !supportInfo.hasLegacyGetUserMedia) {
         setMediaStatus('当前 WebView 不支持 getUserMedia()', 'status-err');
-        log('navigator.mediaDevices.getUserMedia 不可用');
-        setButtons({ requestDisabled: false });
+        log('getUserMedia API 不可用', supportInfo);
         return;
       }
 
@@ -459,25 +550,19 @@
         recorder.stop();
       }
       stopTracksOnly();
-      setMediaStatus('正在申请摄像头和麦克风…', 'status-warn');
+      clearCanvas();
+      setRecordStatus('未开始', '');
+      setMediaStatus('正在申请：' + preset.label, 'status-warn');
 
-      const constraints = {
-        video: {
-          facingMode: 'user',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
-      };
-
-      log('开始调用 getUserMedia()', { constraints, isSecureContext: window.isSecureContext, href: location.href });
+      log('开始调用 getUserMedia()', {
+        mode: modeKey,
+        label: preset.label,
+        constraints: preset.constraints,
+        supportInfo
+      });
 
       try {
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        const stream = await getUserMediaCompat(preset.constraints);
         mediaStream = stream;
         el.video.srcObject = stream;
 
@@ -487,20 +572,28 @@
           log('video.play() 报错（通常不影响流本身）: ' + playErr.message);
         }
 
-        setMediaStatus('已获取摄像头 + 麦克风', 'status-ok');
-        setButtons({ requestDisabled: false });
+        setMediaStatus('申请成功：' + preset.label, 'status-ok');
+        setButtons();
         dumpTrackInfo(stream);
 
-        snapshotTimer = setTimeout(() => {
-          captureSnapshot('auto');
-          snapshotTimer = null;
-        }, 1200);
+        if (stream.getVideoTracks().length > 0) {
+          snapshotTimer = setTimeout(() => {
+            captureSnapshot('auto');
+            snapshotTimer = null;
+          }, 1200);
+        }
 
-        log('getUserMedia() 成功：如果这是在 BOSS 直聘 WebView 中发生的，说明当前网页已拿到媒体流');
+        log('getUserMedia() 成功', {
+          mode: modeKey,
+          videoTrackCount: stream.getVideoTracks().length,
+          audioTrackCount: stream.getAudioTracks().length
+        });
       } catch (err) {
-        setMediaStatus('申请失败：' + err.name, 'status-err');
-        setButtons({ requestDisabled: false });
+        setMediaStatus('申请失败：' + preset.label + ' / ' + err.name, 'status-err');
+        setButtons();
         log('getUserMedia() 失败', {
+          mode: modeKey,
+          label: preset.label,
           name: err.name,
           message: err.message,
           stack: err.stack || ''
@@ -553,7 +646,10 @@
       recorder.onstart = () => {
         setRecordStatus('录音中…', 'status-ok');
         setButtons();
-        log('录音已开始', { mimeType: recorder.mimeType || recordMimeType || 'browser-default' });
+        log('录音已开始', {
+          mode: currentModeKey,
+          mimeType: recorder.mimeType || recordMimeType || 'browser-default'
+        });
       };
 
       recorder.ondataavailable = (event) => {
@@ -580,6 +676,7 @@
         setRecordStatus('录音已停止，可回放', 'status-warn');
         setButtons();
         log('录音已停止并生成 Blob', {
+          mode: currentModeKey,
           mimeType: finalType,
           chunkCount: recordChunks.length,
           totalBytes: blob.size
@@ -597,7 +694,9 @@
       recorder.stop();
     }
 
-    el.btnRequest.addEventListener('click', requestMedia);
+    el.btnVideoOnly.addEventListener('click', () => requestMedia('videoOnly'));
+    el.btnAudioOnly.addEventListener('click', () => requestMedia('audioOnly'));
+    el.btnVideoAudio.addEventListener('click', () => requestMedia('videoAudio'));
     el.btnSnapshot.addEventListener('click', () => captureSnapshot('manual'));
     el.btnRecord.addEventListener('click', startRecording);
     el.btnStopRecord.addEventListener('click', stopRecording);
@@ -617,9 +716,10 @@
     });
 
     refreshEnv();
+    clearCanvas();
     setButtons();
-    log('页面已加载，准备自动申请摄像头和麦克风');
-    requestMedia();
+    log('浏览器媒体能力检测', getSupportInfo());
+    log('页面已加载，请依次点击“仅摄像头 / 仅麦克风 / 摄像头+麦克风”进行对照测试');
   </script>
 </body>
 </html>
