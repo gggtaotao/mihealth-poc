@@ -1,251 +1,625 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mi Health Camera PoC</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BOSS直聘 WebView 摄像头/麦克风 PoC</title>
   <style>
     :root {
-      --bg: #edf3fb;
-      --card: #ffffff;
-      --text: #16202b;
-      --muted: #5f6b7b;
-      --accent: #005f99;
-      --ok: #067647;
-      --err: #b42318;
-      --border: #d8e3f0;
-      --panel: #101722;
-      --panel-text: #d9e2ef;
+      color-scheme: dark;
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel-2: #1f2937;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --err: #ef4444;
+      --accent: #38bdf8;
+      --border: rgba(148, 163, 184, 0.18);
     }
-    * {
-      box-sizing: border-box;
-    }
+
+    * { box-sizing: border-box; }
+
     body {
       margin: 0;
-      font-family: "Segoe UI", "PingFang SC", sans-serif;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(180deg, #020617 0%, #0f172a 100%);
       color: var(--text);
-      background:
-        radial-gradient(circle at top left, #f7fbff 0, transparent 35%),
-        linear-gradient(180deg, #eef5ff 0, var(--bg) 100%);
     }
-    main {
-      max-width: 820px;
+
+    .wrap {
+      max-width: 1180px;
       margin: 0 auto;
-      padding: 24px 18px 40px;
+      padding: 24px;
     }
-    .card {
-      background: var(--card);
+
+    .hero, .panel {
+      background: rgba(17, 24, 39, 0.88);
       border: 1px solid var(--border);
-      border-radius: 22px;
-      padding: 22px;
-      box-shadow: 0 20px 48px rgba(17, 31, 51, 0.08);
+      border-radius: 18px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(8px);
     }
-    h1 {
-      margin: 0 0 10px;
-      font-size: 30px;
-      line-height: 1.15;
-    }
-    p {
-      margin: 0 0 12px;
-      line-height: 1.6;
-      color: var(--muted);
-    }
-    .status {
-      margin: 14px 0 18px;
-      font-size: 22px;
-      font-weight: 700;
-    }
-    .status.ok {
-      color: var(--ok);
-    }
-    .status.err {
-      color: var(--err);
-    }
-    .actions {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
+
+    .hero {
+      padding: 24px;
       margin-bottom: 18px;
     }
-    button {
-      appearance: none;
-      border: none;
-      border-radius: 999px;
-      padding: 12px 18px;
-      background: var(--accent);
-      color: #fff;
-      font-size: 16px;
-      font-weight: 700;
-      cursor: pointer;
+
+    .hero h1 {
+      margin: 0 0 10px;
+      font-size: 30px;
+      line-height: 1.2;
     }
-    button.secondary {
-      background: #dae8f7;
-      color: #11324d;
+
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
     }
+
     .grid {
       display: grid;
-      gap: 16px;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      align-items: start;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 18px;
+    }
+
+    .panel {
+      padding: 18px;
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+
+    .info-list {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .info-list li {
+      padding: 12px 14px;
+      background: rgba(31, 41, 55, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      line-height: 1.6;
+      word-break: break-all;
+    }
+
+    .label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .status-ok { color: var(--ok); }
+    .status-warn { color: var(--warn); }
+    .status-err { color: var(--err); }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
       margin-bottom: 16px;
     }
-    .panel {
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 11px 16px;
+      color: #fff;
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+
+    button:hover:not(:disabled) { transform: translateY(-1px); }
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    button.secondary { background: linear-gradient(135deg, #334155, #475569); }
+    button.warn { background: linear-gradient(135deg, #d97706, #ea580c); }
+    button.danger { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+    button.success { background: linear-gradient(135deg, #16a34a, #15803d); }
+
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .preview-card {
+      background: rgba(15, 23, 42, 0.65);
       border: 1px solid var(--border);
-      border-radius: 18px;
-      overflow: hidden;
-      background: #f7fbff;
+      border-radius: 16px;
+      padding: 14px;
     }
-    .panel h2 {
-      margin: 0;
-      padding: 12px 14px;
+
+    .preview-card h3 {
+      margin: 0 0 10px;
       font-size: 15px;
-      font-weight: 700;
-      color: #24435f;
-      background: #eaf2fb;
-      border-bottom: 1px solid var(--border);
+      color: var(--muted);
     }
-    video,
-    canvas {
-      display: block;
+
+    video, canvas, audio {
       width: 100%;
-      background: #09111a;
-      aspect-ratio: 4 / 3;
+      border-radius: 12px;
+      background: #000;
+    }
+
+    video, canvas {
+      min-height: 220px;
       object-fit: cover;
     }
-    pre {
+
+    .mono {
+      font-family: Consolas, "SFMono-Regular", Menlo, monospace;
+      font-size: 12px;
+    }
+
+    #log {
       margin: 0;
-      padding: 14px;
-      min-height: 250px;
+      max-height: 420px;
+      overflow: auto;
       white-space: pre-wrap;
       word-break: break-word;
-      background: var(--panel);
-      color: var(--panel-text);
-      font-size: 14px;
-      line-height: 1.45;
-      overflow: auto;
-      border-radius: 18px;
+      line-height: 1.55;
+      background: #020617;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
     }
-    .footnote {
-      font-size: 13px;
+
+    .note {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: rgba(8, 47, 73, 0.35);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      color: #cbd5e1;
+      line-height: 1.7;
+    }
+
+    .foot {
+      margin-top: 10px;
       color: var(--muted);
-      margin-top: 14px;
+      font-size: 13px;
     }
   </style>
 </head>
 <body>
-  <main>
-    <div class="card">
-      <h1>Mi Health WebView Camera PoC</h1>
-      <p>ҳ����غ���Զ���������ͷȨ�ޣ�����������˷�Ȩ�ޡ��ɹ������ʾʵʱԤ��������ͷ������������Զ�ץ��һ֡��Ϊ֤�ݡ�</p>
-      <div id="status" class="status">״̬����ʼ����</div>
-      <div class="actions">
-        <button id="retry" type="button">������������ͷ</button>
-        <button id="stop" type="button" class="secondary">ֹͣ����ͷ</button>
-      </div>
-      <div class="grid">
-        <section class="panel">
-          <h2>ʵʱԤ��</h2>
-          <video id="preview" autoplay playsinline muted></video>
-        </section>
-        <section class="panel">
-          <h2>�Զ�ץ��</h2>
-          <canvas id="snapshot"></canvas>
-        </section>
-      </div>
-      <pre id="log"></pre>
-      <p class="footnote">�����־����� <code>SUCCESS</code> �͹����Ϣ����ҳ��չʾ��Ԥ��/ץ�ģ���˵�� WebView ��Ϊ��ҳ��������ͷ������</p>
+  <div class="wrap">
+    <section class="hero">
+      <h1>BOSS直聘 WebView 摄像头/麦克风 PoC</h1>
+      <p>
+        该页面用于验证 <strong>com.hpbr.bosszhipin</strong> 的 WebView 在 App 已具备 Android 摄像头/麦克风权限的情况下，
+        是否会对当前网页直接放行 <code>getUserMedia()</code> / <code>MediaRecorder</code>。
+        页面会在加载后自动申请摄像头和麦克风，并支持拍照、录音、播放录音结果。
+      </p>
+    </section>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>页面环境</h2>
+        <ul class="info-list mono">
+          <li><span class="label">URL</span><span id="currentUrl">-</span></li>
+          <li><span class="label">Secure Context</span><span id="secureState">-</span></li>
+          <li><span class="label">User-Agent</span><span id="ua">-</span></li>
+          <li><span class="label">媒体状态</span><span id="mediaStatus">等待初始化</span></li>
+          <li><span class="label">录音状态</span><span id="recordStatus">未开始</span></li>
+        </ul>
+      </section>
+
+      <section class="panel">
+        <h2>操作</h2>
+        <div class="actions">
+          <button id="btnRequest">重新申请摄像头+麦克风</button>
+          <button id="btnSnapshot" class="secondary" disabled>抓拍当前画面</button>
+          <button id="btnRecord" class="success" disabled>开始录音</button>
+          <button id="btnStopRecord" class="warn" disabled>停止录音</button>
+          <button id="btnStopAll" class="danger" disabled>停止所有设备</button>
+          <button id="btnClear" class="secondary">清空日志</button>
+        </div>
+        <div class="note">
+          <strong>验证成功的典型表现：</strong>
+          在 BOSS 直聘 WebView 中打开本页后，页面能直接弹起/拿到摄像头与麦克风，出现实时预览、抓拍成功，且录音可开始并回放。
+          若日志显示 <code>isSecureContext = false</code> 或因浏览器策略被拒绝，则说明是页面安全上下文限制，而不一定是 App 权限逻辑失效。
+        </div>
+        <div class="foot">建议同时结合 adb 预先授予 CAMERA / RECORD_AUDIO，以验证“网页未按 origin 独立授权而被直接 grant”的场景。</div>
+      </section>
     </div>
-  </main>
+
+    <section class="panel" style="margin-top: 18px;">
+      <h2>预览与录音结果</h2>
+      <div class="preview-grid">
+        <div class="preview-card">
+          <h3>摄像头实时画面</h3>
+          <video id="video" autoplay playsinline muted></video>
+        </div>
+        <div class="preview-card">
+          <h3>自动/手动抓拍结果</h3>
+          <canvas id="snapshot" width="640" height="480"></canvas>
+        </div>
+        <div class="preview-card">
+          <h3>录音回放</h3>
+          <audio id="audioPlayback" controls></audio>
+          <div class="foot">录音仅使用当前流中的音频轨道，不额外申请新权限。</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-top: 18px;">
+      <h2>运行日志</h2>
+      <pre id="log" class="mono"></pre>
+    </section>
+  </div>
+
   <script>
-    const statusEl = document.getElementById("status");
-    const logEl = document.getElementById("log");
-    const videoEl = document.getElementById("preview");
-    const canvasEl = document.getElementById("snapshot");
-    const retryBtn = document.getElementById("retry");
-    const stopBtn = document.getElementById("stop");
+    const el = {
+      currentUrl: document.getElementById('currentUrl'),
+      secureState: document.getElementById('secureState'),
+      ua: document.getElementById('ua'),
+      mediaStatus: document.getElementById('mediaStatus'),
+      recordStatus: document.getElementById('recordStatus'),
+      video: document.getElementById('video'),
+      snapshot: document.getElementById('snapshot'),
+      audioPlayback: document.getElementById('audioPlayback'),
+      log: document.getElementById('log'),
+      btnRequest: document.getElementById('btnRequest'),
+      btnSnapshot: document.getElementById('btnSnapshot'),
+      btnRecord: document.getElementById('btnRecord'),
+      btnStopRecord: document.getElementById('btnStopRecord'),
+      btnStopAll: document.getElementById('btnStopAll'),
+      btnClear: document.getElementById('btnClear')
+    };
 
-    let stream = null;
-    let captureTimer = null;
+    let mediaStream = null;
+    let recorder = null;
+    let recordChunks = [];
+    let recordMimeType = '';
+    let snapshotTimer = null;
+    let audioObjectUrl = '';
 
-    function log(message, level) {
-      const stamp = new Date().toLocaleTimeString();
-      const line = `[${stamp}] ${message}`;
-      logEl.textContent += `${line}\n`;
-      logEl.scrollTop = logEl.scrollHeight;
-      console.log(line);
-      if (level === "error") {
-        statusEl.textContent = "״̬������ʧ��";
-        statusEl.className = "status err";
-      } else if (level === "ok") {
-        statusEl.textContent = "״̬������ͷ�ѿ���";
-        statusEl.className = "status ok";
+    function ts() {
+      return new Date().toLocaleTimeString();
+    }
+
+    function log(message, extra) {
+      let line = '[' + ts() + '] ' + message;
+      if (extra !== undefined) {
+        try {
+          line += '\n' + JSON.stringify(extra, null, 2);
+        } catch (e) {
+          line += '\n' + String(extra);
+        }
+      }
+      el.log.textContent = line + '\n' + el.log.textContent;
+      console.log(message, extra || '');
+    }
+
+    function setMediaStatus(text, cls) {
+      el.mediaStatus.textContent = text;
+      el.mediaStatus.className = cls || '';
+    }
+
+    function setRecordStatus(text, cls) {
+      el.recordStatus.textContent = text;
+      el.recordStatus.className = cls || '';
+    }
+
+    function refreshEnv() {
+      el.currentUrl.textContent = location.href;
+      el.secureState.textContent = String(window.isSecureContext);
+      el.secureState.className = window.isSecureContext ? 'status-ok' : 'status-warn';
+      el.ua.textContent = navigator.userAgent;
+    }
+
+    function setButtons(options = {}) {
+      const hasStream = !!mediaStream;
+      const hasAudioTrack = hasStream && mediaStream.getAudioTracks().length > 0;
+      const recording = recorder && recorder.state === 'recording';
+      el.btnSnapshot.disabled = !hasStream;
+      el.btnStopAll.disabled = !hasStream;
+      el.btnRecord.disabled = !hasAudioTrack || recording;
+      el.btnStopRecord.disabled = !recording;
+      if (typeof options.requestDisabled === 'boolean') {
+        el.btnRequest.disabled = options.requestDisabled;
       }
     }
 
-    function stopCamera() {
-      if (captureTimer) {
-        clearTimeout(captureTimer);
-        captureTimer = null;
+    function cleanupAudioUrl() {
+      if (audioObjectUrl) {
+        URL.revokeObjectURL(audioObjectUrl);
+        audioObjectUrl = '';
       }
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-        log("Stopped all tracks");
-      }
-      stream = null;
-      videoEl.srcObject = null;
     }
 
-    function captureFrame() {
-      if (!stream || !videoEl.videoWidth || !videoEl.videoHeight) {
-        log("Snapshot skipped because video metadata is not ready yet");
+    function getPreferredAudioMimeType() {
+      if (!window.MediaRecorder || typeof MediaRecorder.isTypeSupported !== 'function') {
+        return '';
+      }
+      const candidates = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/ogg;codecs=opus',
+        'audio/mp4'
+      ];
+      return candidates.find(type => MediaRecorder.isTypeSupported(type)) || '';
+    }
+
+    function stopTracksOnly() {
+      if (!mediaStream) {
         return;
       }
-      canvasEl.width = videoEl.videoWidth;
-      canvasEl.height = videoEl.videoHeight;
-      const ctx = canvasEl.getContext("2d");
-      ctx.drawImage(videoEl, 0, 0, canvasEl.width, canvasEl.height);
-      log(`Snapshot captured: ${canvasEl.width}x${canvasEl.height}`, "ok");
+      mediaStream.getTracks().forEach(track => {
+        try {
+          track.stop();
+        } catch (e) {
+          log('停止轨道时出现异常: ' + e.message);
+        }
+      });
+      mediaStream = null;
+      el.video.srcObject = null;
     }
 
-    async function startCamera() {
-      stopCamera();
-      statusEl.textContent = "״̬����������ͷ��";
-      statusEl.className = "status";
-      log("navigator.mediaDevices.getUserMedia({ video: true, audio: false })");
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: "user"
-          },
-          audio: false
-        });
-        videoEl.srcObject = stream;
-        const tracks = stream.getVideoTracks();
-        const details = tracks.map((track) => {
-          const settings = track.getSettings ? JSON.stringify(track.getSettings()) : "{}";
-          return `${track.kind}:${track.label || "(no label)"} settings=${settings}`;
-        });
-        log(`SUCCESS: ${details.join(" | ")}`, "ok");
-        captureTimer = setTimeout(captureFrame, 1200);
-      } catch (err) {
-        const name = err && err.name ? err.name : "UnknownError";
-        const message = err && err.message ? err.message : "";
-        log(`ERROR: ${name} ${message}`, "error");
+    function stopAllDevices() {
+      if (recorder && recorder.state !== 'inactive') {
+        recorder.stop();
+      }
+      stopTracksOnly();
+      setMediaStatus('设备已停止', 'status-warn');
+      setButtons();
+      log('已停止所有摄像头/麦克风轨道');
+    }
+
+    async function captureSnapshot(reason = 'manual') {
+      if (!mediaStream || !el.video.videoWidth || !el.video.videoHeight) {
+        log('抓拍失败：当前没有可用视频帧');
+        return;
+      }
+      const canvas = el.snapshot;
+      canvas.width = el.video.videoWidth;
+      canvas.height = el.video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(el.video, 0, 0, canvas.width, canvas.height);
+      log(reason === 'auto' ? '已自动抓拍一帧画面' : '已手动抓拍当前画面', {
+        width: canvas.width,
+        height: canvas.height
+      });
+    }
+
+    function dumpTrackInfo(stream) {
+      const videoTracks = stream.getVideoTracks().map(track => ({
+        kind: track.kind,
+        label: track.label,
+        enabled: track.enabled,
+        muted: track.muted,
+        readyState: track.readyState,
+        settings: typeof track.getSettings === 'function' ? track.getSettings() : {}
+      }));
+      const audioTracks = stream.getAudioTracks().map(track => ({
+        kind: track.kind,
+        label: track.label,
+        enabled: track.enabled,
+        muted: track.muted,
+        readyState: track.readyState,
+        settings: typeof track.getSettings === 'function' ? track.getSettings() : {}
+      }));
+      log('媒体轨道信息', { videoTracks, audioTracks });
+
+      if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+        navigator.mediaDevices.enumerateDevices()
+          .then(devices => {
+            log('enumerateDevices() 返回', devices.map(device => ({
+              kind: device.kind,
+              label: device.label,
+              deviceId: device.deviceId,
+              groupId: device.groupId
+            })));
+          })
+          .catch(err => {
+            log('enumerateDevices() 失败: ' + err.name + ' / ' + err.message);
+          });
       }
     }
 
-    retryBtn.addEventListener("click", startCamera);
-    stopBtn.addEventListener("click", stopCamera);
-    videoEl.addEventListener("loadedmetadata", () => {
-      log(`Preview metadata: ${videoEl.videoWidth}x${videoEl.videoHeight}`);
+    async function requestMedia() {
+      refreshEnv();
+      cleanupAudioUrl();
+      el.audioPlayback.removeAttribute('src');
+      el.audioPlayback.load();
+      setButtons({ requestDisabled: true });
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setMediaStatus('当前 WebView 不支持 getUserMedia()', 'status-err');
+        log('navigator.mediaDevices.getUserMedia 不可用');
+        setButtons({ requestDisabled: false });
+        return;
+      }
+
+      if (snapshotTimer) {
+        clearTimeout(snapshotTimer);
+        snapshotTimer = null;
+      }
+
+      if (recorder && recorder.state !== 'inactive') {
+        recorder.stop();
+      }
+      stopTracksOnly();
+      setMediaStatus('正在申请摄像头和麦克风…', 'status-warn');
+
+      const constraints = {
+        video: {
+          facingMode: 'user',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      };
+
+      log('开始调用 getUserMedia()', { constraints, isSecureContext: window.isSecureContext, href: location.href });
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        mediaStream = stream;
+        el.video.srcObject = stream;
+
+        try {
+          await el.video.play();
+        } catch (playErr) {
+          log('video.play() 报错（通常不影响流本身）: ' + playErr.message);
+        }
+
+        setMediaStatus('已获取摄像头 + 麦克风', 'status-ok');
+        setButtons({ requestDisabled: false });
+        dumpTrackInfo(stream);
+
+        snapshotTimer = setTimeout(() => {
+          captureSnapshot('auto');
+          snapshotTimer = null;
+        }, 1200);
+
+        log('getUserMedia() 成功：如果这是在 BOSS 直聘 WebView 中发生的，说明当前网页已拿到媒体流');
+      } catch (err) {
+        setMediaStatus('申请失败：' + err.name, 'status-err');
+        setButtons({ requestDisabled: false });
+        log('getUserMedia() 失败', {
+          name: err.name,
+          message: err.message,
+          stack: err.stack || ''
+        });
+      }
+    }
+
+    function startRecording() {
+      if (!window.MediaRecorder) {
+        setRecordStatus('当前 WebView 不支持 MediaRecorder', 'status-err');
+        log('MediaRecorder 不可用');
+        return;
+      }
+
+      if (!mediaStream) {
+        setRecordStatus('没有可用媒体流，无法录音', 'status-err');
+        log('开始录音失败：mediaStream 为空');
+        return;
+      }
+
+      const audioTracks = mediaStream.getAudioTracks().filter(track => track.readyState === 'live');
+      if (!audioTracks.length) {
+        setRecordStatus('当前流中没有可用音频轨道', 'status-err');
+        log('开始录音失败：未找到 live 音频轨道');
+        return;
+      }
+
+      if (recorder && recorder.state === 'recording') {
+        log('录音已经在进行中');
+        return;
+      }
+
+      const audioOnlyStream = new MediaStream(audioTracks);
+      recordChunks = [];
+      recordMimeType = getPreferredAudioMimeType();
+      const options = recordMimeType ? { mimeType: recordMimeType } : undefined;
+
+      try {
+        recorder = new MediaRecorder(audioOnlyStream, options);
+      } catch (err) {
+        setRecordStatus('MediaRecorder 初始化失败', 'status-err');
+        log('MediaRecorder 初始化失败', {
+          mimeType: recordMimeType,
+          name: err.name,
+          message: err.message
+        });
+        return;
+      }
+
+      recorder.onstart = () => {
+        setRecordStatus('录音中…', 'status-ok');
+        setButtons();
+        log('录音已开始', { mimeType: recorder.mimeType || recordMimeType || 'browser-default' });
+      };
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          recordChunks.push(event.data);
+          log('收到录音数据分片', { size: event.data.size, type: event.data.type || recorder.mimeType || recordMimeType || 'unknown' });
+        }
+      };
+
+      recorder.onerror = (event) => {
+        const err = event.error || {};
+        setRecordStatus('录音错误：' + (err.name || 'unknown'), 'status-err');
+        log('MediaRecorder 错误', { name: err.name, message: err.message });
+        setButtons();
+      };
+
+      recorder.onstop = () => {
+        const finalType = recorder.mimeType || recordMimeType || 'audio/webm';
+        const blob = new Blob(recordChunks, { type: finalType });
+        cleanupAudioUrl();
+        audioObjectUrl = URL.createObjectURL(blob);
+        el.audioPlayback.src = audioObjectUrl;
+        el.audioPlayback.load();
+        setRecordStatus('录音已停止，可回放', 'status-warn');
+        setButtons();
+        log('录音已停止并生成 Blob', {
+          mimeType: finalType,
+          chunkCount: recordChunks.length,
+          totalBytes: blob.size
+        });
+      };
+
+      recorder.start(500);
+    }
+
+    function stopRecording() {
+      if (!recorder || recorder.state === 'inactive') {
+        log('当前没有进行中的录音');
+        return;
+      }
+      recorder.stop();
+    }
+
+    el.btnRequest.addEventListener('click', requestMedia);
+    el.btnSnapshot.addEventListener('click', () => captureSnapshot('manual'));
+    el.btnRecord.addEventListener('click', startRecording);
+    el.btnStopRecord.addEventListener('click', stopRecording);
+    el.btnStopAll.addEventListener('click', stopAllDevices);
+    el.btnClear.addEventListener('click', () => { el.log.textContent = ''; });
+
+    window.addEventListener('beforeunload', () => {
+      if (snapshotTimer) {
+        clearTimeout(snapshotTimer);
+        snapshotTimer = null;
+      }
+      if (recorder && recorder.state !== 'inactive') {
+        recorder.stop();
+      }
+      stopTracksOnly();
+      cleanupAudioUrl();
     });
 
-    log(`Loaded: ${location.href}`);
-    log(`isSecureContext=${window.isSecureContext}`);
-    log(`userAgent=${navigator.userAgent}`);
-    window.addEventListener("load", () => {
-      void startCamera();
-    });
+    refreshEnv();
+    setButtons();
+    log('页面已加载，准备自动申请摄像头和麦克风');
+    requestMedia();
   </script>
 </body>
 </html>
