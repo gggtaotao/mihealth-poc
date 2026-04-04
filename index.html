@@ -1,725 +1,316 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BOSS直聘 WebView 摄像头/麦克风 PoC</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DZZP Geolocation PoC</title>
   <style>
     :root {
-      color-scheme: dark;
-      --bg: #0f172a;
-      --panel: #111827;
-      --text: #e5e7eb;
-      --muted: #94a3b8;
-      --ok: #22c55e;
-      --warn: #f59e0b;
-      --err: #ef4444;
-      --border: rgba(148, 163, 184, 0.18);
+      --bg: #f7f2e8;
+      --panel: #fffdf8;
+      --ink: #1f1a17;
+      --muted: #6a615a;
+      --accent: #c4572d;
+      --accent-2: #2f6f62;
+      --border: #d8cbb8;
     }
 
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
+      min-height: 100vh;
       font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-      background: linear-gradient(180deg, #020617 0%, #0f172a 100%);
-      color: var(--text);
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, #f4d7b8 0, transparent 28%),
+        radial-gradient(circle at bottom right, #d8e7df 0, transparent 24%),
+        var(--bg);
+      padding: 24px;
     }
 
-    .wrap {
-      max-width: 1180px;
+    .card {
+      max-width: 860px;
       margin: 0 auto;
-      padding: 24px;
-    }
-
-    .hero, .panel {
-      background: rgba(17, 24, 39, 0.88);
+      background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 18px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.28);
-      backdrop-filter: blur(8px);
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: 0 18px 50px rgba(44, 31, 20, 0.08);
     }
 
-    .hero {
-      padding: 24px;
-      margin-bottom: 18px;
-    }
-
-    .hero h1 {
+    h1 {
       margin: 0 0 10px;
-      font-size: 30px;
-      line-height: 1.2;
+      font-size: 32px;
+      line-height: 1.1;
     }
 
-    .hero p {
-      margin: 0;
+    .sub {
+      margin: 0 0 20px;
       color: var(--muted);
-      line-height: 1.7;
     }
 
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 18px;
-    }
-
-    .panel {
-      padding: 18px;
-    }
-
-    .panel h2 {
-      margin: 0 0 14px;
-      font-size: 18px;
-    }
-
-    .info-list {
-      display: grid;
-      gap: 10px;
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    .info-list li {
-      padding: 12px 14px;
-      background: rgba(31, 41, 55, 0.85);
-      border: 1px solid var(--border);
+    .banner {
+      margin: 18px 0 22px;
+      padding: 14px 16px;
+      border-left: 5px solid var(--accent);
+      background: #fff4eb;
       border-radius: 12px;
-      line-height: 1.6;
-      word-break: break-all;
+      color: #6d341d;
     }
 
-    .label {
-      display: block;
-      margin-bottom: 4px;
-      font-size: 12px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    .status-ok { color: var(--ok); }
-    .status-warn { color: var(--warn); }
-    .status-err { color: var(--err); }
-
-    .actions {
+    .row {
       display: flex;
+      gap: 12px;
       flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 16px;
+      margin: 20px 0;
     }
 
     button {
       border: 0;
-      border-radius: 12px;
-      padding: 11px 16px;
-      color: #fff;
-      background: linear-gradient(135deg, #0284c7, #2563eb);
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 600;
-      transition: transform 0.15s ease, opacity 0.15s ease;
-    }
-
-    button:hover:not(:disabled) { transform: translateY(-1px); }
-    button:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    button.secondary { background: linear-gradient(135deg, #334155, #475569); }
-    button.warn { background: linear-gradient(135deg, #d97706, #ea580c); }
-    button.danger { background: linear-gradient(135deg, #dc2626, #b91c1c); }
-    button.success { background: linear-gradient(135deg, #16a34a, #15803d); }
-
-    .preview-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 16px;
-    }
-
-    .preview-card {
-      background: rgba(15, 23, 42, 0.65);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 14px;
-    }
-
-    .preview-card h3 {
-      margin: 0 0 10px;
+      border-radius: 999px;
+      padding: 12px 18px;
       font-size: 15px;
-      color: var(--muted);
+      cursor: pointer;
+      transition: transform 120ms ease, opacity 120ms ease;
     }
 
-    video, canvas, audio {
-      width: 100%;
-      border-radius: 12px;
-      background: #000;
+    button:hover {
+      transform: translateY(-1px);
     }
 
-    video, canvas {
-      min-height: 220px;
-      object-fit: cover;
+    .primary {
+      background: var(--accent);
+      color: #fff;
     }
 
-    .mono {
-      font-family: Consolas, "SFMono-Regular", Menlo, monospace;
+    .secondary {
+      background: var(--accent-2);
+      color: #fff;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin: 18px 0 22px;
+    }
+
+    .tile {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      background: #fff;
+    }
+
+    .tile .label {
+      display: block;
       font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
     }
 
-    #log {
+    .tile .value {
+      font-size: 16px;
+      word-break: break-word;
+    }
+
+    pre {
       margin: 0;
-      max-height: 420px;
+      padding: 18px;
+      min-height: 220px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: #161311;
+      color: #f4efe8;
       overflow: auto;
       white-space: pre-wrap;
       word-break: break-word;
-      line-height: 1.55;
-      background: #020617;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px;
+      line-height: 1.5;
     }
 
-    .note {
-      margin-top: 18px;
-      padding: 14px 16px;
-      border-radius: 14px;
-      background: rgba(8, 47, 73, 0.35);
-      border: 1px solid rgba(56, 189, 248, 0.25);
-      color: #cbd5e1;
-      line-height: 1.7;
-    }
+    @media (max-width: 640px) {
+      body {
+        padding: 14px;
+      }
 
-    .foot {
-      margin-top: 10px;
-      color: var(--muted);
-      font-size: 13px;
+      .card {
+        padding: 18px;
+        border-radius: 16px;
+      }
+
+      h1 {
+        font-size: 26px;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <section class="hero">
-      <h1>BOSS直聘 WebView 摄像头/麦克风 PoC</h1>
-      <p>
-        本页拆成 3 组独立测试：<strong>仅摄像头</strong>、<strong>仅麦克风</strong>、<strong>摄像头+麦克风</strong>。
-        这样可以区分是 VIDEO_CAPTURE 路径、AUDIO_CAPTURE 路径，还是两者一起申请时被宿主拒绝。
-      </p>
-    </section>
+  <main class="card">
+    <h1>DZZP Geolocation PoC</h1>
+    <p class="sub">页面加载后会自动调用 HTML5 Geolocation，并把结果直接显示在本页。</p>
 
-    <div class="grid">
-      <section class="panel">
-        <h2>页面环境</h2>
-        <ul class="info-list mono">
-          <li><span class="label">URL</span><span id="currentUrl">-</span></li>
-          <li><span class="label">Secure Context</span><span id="secureState">-</span></li>
-          <li><span class="label">User-Agent</span><span id="ua">-</span></li>
-          <li><span class="label">当前测试模式</span><span id="currentMode">尚未开始</span></li>
-          <li><span class="label">媒体状态</span><span id="mediaStatus">等待手动触发测试</span></li>
-          <li><span class="label">录音状态</span><span id="recordStatus">未开始</span></li>
-        </ul>
-      </section>
-
-      <section class="panel">
-        <h2>测试操作</h2>
-        <div class="actions">
-          <button id="btnVideoOnly">测试：仅摄像头</button>
-          <button id="btnAudioOnly" class="success">测试：仅麦克风</button>
-          <button id="btnVideoAudio" class="warn">测试：摄像头+麦克风</button>
-          <button id="btnSnapshot" class="secondary" disabled>抓拍当前画面</button>
-          <button id="btnRecord" class="success" disabled>开始录音</button>
-          <button id="btnStopRecord" class="warn" disabled>停止录音</button>
-          <button id="btnStopAll" class="danger" disabled>停止所有设备</button>
-          <button id="btnClear" class="secondary">清空日志</button>
-        </div>
-        <div class="note">
-          <strong>如何看结果：</strong><br />
-          1. 如果 <code>audio-only</code> 成功，但 <code>video-only</code> 失败，说明 BOSS 的 VIDEO_CAPTURE 路径有额外限制。<br />
-          2. 如果三种都失败，说明更像是 URL / 域名白名单 / 场景状态 统一拦截。<br />
-          3. 如果 <code>video-only</code> 也失败，不代表网页真的没申请音频；因为宿主可能把 VIDEO_CAPTURE 绑到了 CAMERA + RECORD_AUDIO。
-        </div>
-        <div class="foot">本版本不再自动申请权限，避免页面加载时直接触发一次失败；请手动逐个测试。</div>
-      </section>
+    <div class="banner">
+      预期现象：如果外部链接进入业务 WebView 后没有二次确认，这个页面会直接拿到定位结果。
     </div>
 
-    <section class="panel" style="margin-top: 18px;">
-      <h2>预览与录音结果</h2>
-      <div class="preview-grid">
-        <div class="preview-card">
-          <h3>实时画面</h3>
-          <video id="video" autoplay playsinline muted></video>
-        </div>
-        <div class="preview-card">
-          <h3>抓拍结果</h3>
-          <canvas id="snapshot" width="640" height="480"></canvas>
-        </div>
-        <div class="preview-card">
-          <h3>录音回放</h3>
-          <audio id="audioPlayback" controls></audio>
-          <div class="foot">录音按钮仅在当前流里存在音频轨道时可用。</div>
-        </div>
+    <section class="meta">
+      <div class="tile">
+        <span class="label">Current URL</span>
+        <span class="value" id="current-url">-</span>
+      </div>
+      <div class="tile">
+        <span class="label">User Agent</span>
+        <span class="value" id="user-agent">-</span>
+      </div>
+      <div class="tile">
+        <span class="label">Permission State</span>
+        <span class="value" id="perm-state">checking</span>
+      </div>
+      <div class="tile">
+        <span class="label">Last Action</span>
+        <span class="value" id="last-action">page loaded</span>
       </div>
     </section>
 
-    <section class="panel" style="margin-top: 18px;">
-      <h2>运行日志</h2>
-      <pre id="log" class="mono"></pre>
-    </section>
-  </div>
+    <div class="row">
+      <button class="primary" id="btn-request">读取当前位置</button>
+      <button class="secondary" id="btn-watch">持续监听位置</button>
+    </div>
+
+    <pre id="output">waiting...</pre>
+  </main>
 
   <script>
-    const el = {
-      currentUrl: document.getElementById('currentUrl'),
-      secureState: document.getElementById('secureState'),
-      ua: document.getElementById('ua'),
-      currentMode: document.getElementById('currentMode'),
-      mediaStatus: document.getElementById('mediaStatus'),
-      recordStatus: document.getElementById('recordStatus'),
-      video: document.getElementById('video'),
-      snapshot: document.getElementById('snapshot'),
-      audioPlayback: document.getElementById('audioPlayback'),
-      log: document.getElementById('log'),
-      btnVideoOnly: document.getElementById('btnVideoOnly'),
-      btnAudioOnly: document.getElementById('btnAudioOnly'),
-      btnVideoAudio: document.getElementById('btnVideoAudio'),
-      btnSnapshot: document.getElementById('btnSnapshot'),
-      btnRecord: document.getElementById('btnRecord'),
-      btnStopRecord: document.getElementById('btnStopRecord'),
-      btnStopAll: document.getElementById('btnStopAll'),
-      btnClear: document.getElementById('btnClear')
-    };
+    const output = document.getElementById("output");
+    const currentUrl = document.getElementById("current-url");
+    const userAgent = document.getElementById("user-agent");
+    const permState = document.getElementById("perm-state");
+    const lastAction = document.getElementById("last-action");
+    const btnRequest = document.getElementById("btn-request");
+    const btnWatch = document.getElementById("btn-watch");
 
-    const presets = {
-      videoOnly: {
-        label: '仅摄像头',
-        constraints: {
-          video: {
-            facingMode: 'user',
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          },
-          audio: false
-        }
-      },
-      audioOnly: {
-        label: '仅麦克风',
-        constraints: {
-          video: false,
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true
-          }
-        }
-      },
-      videoAudio: {
-        label: '摄像头 + 麦克风',
-        constraints: {
-          video: {
-            facingMode: 'user',
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          },
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true
-          }
-        }
-      }
-    };
+    let watchId = null;
 
-    let mediaStream = null;
-    let recorder = null;
-    let recordChunks = [];
-    let recordMimeType = '';
-    let snapshotTimer = null;
-    let audioObjectUrl = '';
-    let currentModeKey = '';
-
-    function ts() {
-      return new Date().toLocaleTimeString();
+    function setAction(text) {
+      lastAction.textContent = text;
     }
 
-    function log(message, extra) {
-      let line = '[' + ts() + '] ' + message;
-      if (extra !== undefined) {
-        try {
-          line += '\n' + JSON.stringify(extra, null, 2);
-        } catch (e) {
-          line += '\n' + String(extra);
-        }
-      }
-      el.log.textContent = line + '\n' + el.log.textContent;
-      console.log(message, extra || '');
+    function print(data) {
+      output.textContent = typeof data === "string" ? data : JSON.stringify(data, null, 2);
     }
 
-    function setMediaStatus(text, cls) {
-      el.mediaStatus.textContent = text;
-      el.mediaStatus.className = cls || '';
-    }
-
-    function setRecordStatus(text, cls) {
-      el.recordStatus.textContent = text;
-      el.recordStatus.className = cls || '';
-    }
-
-    function setMode(key) {
-      currentModeKey = key || '';
-      el.currentMode.textContent = key && presets[key] ? presets[key].label : '尚未开始';
-    }
-
-    function refreshEnv() {
-      el.currentUrl.textContent = location.href;
-      el.secureState.textContent = String(window.isSecureContext);
-      el.secureState.className = window.isSecureContext ? 'status-ok' : 'status-warn';
-      el.ua.textContent = navigator.userAgent;
-    }
-
-    function getSupportInfo() {
-      const legacy = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+    function formatPosition(pos) {
       return {
-        hasNavigatorMediaDevices: !!navigator.mediaDevices,
-        hasModernGetUserMedia: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia),
-        hasLegacyGetUserMedia: !!legacy,
-        isSecureContext: window.isSecureContext,
-        href: location.href
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+        altitude: pos.coords.altitude,
+        altitudeAccuracy: pos.coords.altitudeAccuracy,
+        heading: pos.coords.heading,
+        speed: pos.coords.speed,
+        timestamp: pos.timestamp,
+        isoTime: new Date(pos.timestamp).toISOString()
       };
     }
 
-    function getUserMediaCompat(constraints) {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        return navigator.mediaDevices.getUserMedia(constraints);
-      }
-      const legacy = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
-      if (legacy) {
-        return new Promise((resolve, reject) => {
-          legacy.call(navigator, constraints, resolve, reject);
-        });
-      }
-      return Promise.reject(new Error('GET_USER_MEDIA_UNAVAILABLE'));
+    function formatError(err) {
+      return {
+        code: err.code,
+        message: err.message,
+        name: err.name || "PositionError",
+        time: new Date().toISOString()
+      };
     }
 
-    function setButtons() {
-      const hasStream = !!mediaStream;
-      const hasVideoTrack = hasStream && mediaStream.getVideoTracks().length > 0;
-      const hasAudioTrack = hasStream && mediaStream.getAudioTracks().length > 0;
-      const recording = recorder && recorder.state === 'recording';
-      el.btnSnapshot.disabled = !hasVideoTrack;
-      el.btnStopAll.disabled = !hasStream;
-      el.btnRecord.disabled = !hasAudioTrack || recording;
-      el.btnStopRecord.disabled = !recording;
-    }
-
-    function cleanupAudioUrl() {
-      if (audioObjectUrl) {
-        URL.revokeObjectURL(audioObjectUrl);
-        audioObjectUrl = '';
-      }
-    }
-
-    function clearCanvas() {
-      const canvas = el.snapshot;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '20px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('等待抓拍', canvas.width / 2, canvas.height / 2);
-    }
-
-    function getPreferredAudioMimeType() {
-      if (!window.MediaRecorder || typeof MediaRecorder.isTypeSupported !== 'function') {
-        return '';
-      }
-      const candidates = [
-        'audio/webm;codecs=opus',
-        'audio/webm',
-        'audio/ogg;codecs=opus',
-        'audio/mp4'
-      ];
-      return candidates.find(type => MediaRecorder.isTypeSupported(type)) || '';
-    }
-
-    function stopTracksOnly() {
-      if (!mediaStream) {
+    async function refreshPermissionState() {
+      if (!navigator.permissions || !navigator.permissions.query) {
+        permState.textContent = "unsupported";
         return;
       }
-      mediaStream.getTracks().forEach(track => {
-        try {
-          track.stop();
-        } catch (e) {
-          log('停止轨道时出现异常: ' + e.message);
-        }
-      });
-      mediaStream = null;
-      el.video.srcObject = null;
-    }
-
-    function stopAllDevices() {
-      if (recorder && recorder.state !== 'inactive') {
-        recorder.stop();
-      }
-      stopTracksOnly();
-      setMediaStatus('设备已停止', 'status-warn');
-      setButtons();
-      log('已停止所有摄像头/麦克风轨道');
-    }
-
-    function captureSnapshot(reason = 'manual') {
-      if (!mediaStream || !el.video.videoWidth || !el.video.videoHeight) {
-        log('抓拍失败：当前没有可用视频帧');
-        return;
-      }
-      const canvas = el.snapshot;
-      canvas.width = el.video.videoWidth;
-      canvas.height = el.video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(el.video, 0, 0, canvas.width, canvas.height);
-      log(reason === 'auto' ? '已自动抓拍一帧画面' : '已手动抓拍当前画面', {
-        width: canvas.width,
-        height: canvas.height,
-        mode: currentModeKey
-      });
-    }
-
-    function dumpTrackInfo(stream) {
-      const videoTracks = stream.getVideoTracks().map(track => ({
-        kind: track.kind,
-        label: track.label,
-        enabled: track.enabled,
-        muted: track.muted,
-        readyState: track.readyState,
-        settings: typeof track.getSettings === 'function' ? track.getSettings() : {}
-      }));
-      const audioTracks = stream.getAudioTracks().map(track => ({
-        kind: track.kind,
-        label: track.label,
-        enabled: track.enabled,
-        muted: track.muted,
-        readyState: track.readyState,
-        settings: typeof track.getSettings === 'function' ? track.getSettings() : {}
-      }));
-      log('媒体轨道信息', { mode: currentModeKey, videoTracks, audioTracks });
-
-      if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
-        navigator.mediaDevices.enumerateDevices()
-          .then(devices => {
-            log('enumerateDevices() 返回', devices.map(device => ({
-              kind: device.kind,
-              label: device.label,
-              deviceId: device.deviceId,
-              groupId: device.groupId
-            })));
-          })
-          .catch(err => {
-            log('enumerateDevices() 失败: ' + err.name + ' / ' + err.message);
-          });
-      }
-    }
-
-    async function requestMedia(modeKey) {
-      const preset = presets[modeKey];
-      if (!preset) {
-        log('未知测试模式: ' + modeKey);
-        return;
-      }
-
-      refreshEnv();
-      setMode(modeKey);
-      cleanupAudioUrl();
-      el.audioPlayback.removeAttribute('src');
-      el.audioPlayback.load();
-
-      const supportInfo = getSupportInfo();
-
-      if (!supportInfo.hasModernGetUserMedia && !supportInfo.hasLegacyGetUserMedia) {
-        setMediaStatus('当前 WebView 不支持 getUserMedia()', 'status-err');
-        log('getUserMedia API 不可用', supportInfo);
-        return;
-      }
-
-      if (snapshotTimer) {
-        clearTimeout(snapshotTimer);
-        snapshotTimer = null;
-      }
-
-      if (recorder && recorder.state !== 'inactive') {
-        recorder.stop();
-      }
-      stopTracksOnly();
-      clearCanvas();
-      setRecordStatus('未开始', '');
-      setMediaStatus('正在申请：' + preset.label, 'status-warn');
-
-      log('开始调用 getUserMedia()', {
-        mode: modeKey,
-        label: preset.label,
-        constraints: preset.constraints,
-        supportInfo
-      });
 
       try {
-        const stream = await getUserMediaCompat(preset.constraints);
-        mediaStream = stream;
-        el.video.srcObject = stream;
-
-        try {
-          await el.video.play();
-        } catch (playErr) {
-          log('video.play() 报错（通常不影响流本身）: ' + playErr.message);
-        }
-
-        setMediaStatus('申请成功：' + preset.label, 'status-ok');
-        setButtons();
-        dumpTrackInfo(stream);
-
-        if (stream.getVideoTracks().length > 0) {
-          snapshotTimer = setTimeout(() => {
-            captureSnapshot('auto');
-            snapshotTimer = null;
-          }, 1200);
-        }
-
-        log('getUserMedia() 成功', {
-          mode: modeKey,
-          videoTrackCount: stream.getVideoTracks().length,
-          audioTrackCount: stream.getAudioTracks().length
-        });
+        const status = await navigator.permissions.query({ name: "geolocation" });
+        permState.textContent = status.state;
+        status.onchange = () => {
+          permState.textContent = status.state;
+        };
       } catch (err) {
-        setMediaStatus('申请失败：' + preset.label + ' / ' + err.name, 'status-err');
-        setButtons();
-        log('getUserMedia() 失败', {
-          mode: modeKey,
-          label: preset.label,
-          name: err.name,
-          message: err.message,
-          stack: err.stack || ''
-        });
+        permState.textContent = "query-failed";
       }
     }
 
-    function startRecording() {
-      if (!window.MediaRecorder) {
-        setRecordStatus('当前 WebView 不支持 MediaRecorder', 'status-err');
-        log('MediaRecorder 不可用');
+    function requestLocation() {
+      setAction("getCurrentPosition");
+      print("requesting geolocation...");
+
+      if (!navigator.geolocation) {
+        print("navigator.geolocation unavailable");
         return;
       }
 
-      if (!mediaStream) {
-        setRecordStatus('没有可用媒体流，无法录音', 'status-err');
-        log('开始录音失败：mediaStream 为空');
-        return;
-      }
-
-      const audioTracks = mediaStream.getAudioTracks().filter(track => track.readyState === 'live');
-      if (!audioTracks.length) {
-        setRecordStatus('当前流中没有可用音频轨道', 'status-err');
-        log('开始录音失败：未找到 live 音频轨道');
-        return;
-      }
-
-      if (recorder && recorder.state === 'recording') {
-        log('录音已经在进行中');
-        return;
-      }
-
-      const audioOnlyStream = new MediaStream(audioTracks);
-      recordChunks = [];
-      recordMimeType = getPreferredAudioMimeType();
-      const options = recordMimeType ? { mimeType: recordMimeType } : undefined;
-
-      try {
-        recorder = new MediaRecorder(audioOnlyStream, options);
-      } catch (err) {
-        setRecordStatus('MediaRecorder 初始化失败', 'status-err');
-        log('MediaRecorder 初始化失败', {
-          mimeType: recordMimeType,
-          name: err.name,
-          message: err.message
-        });
-        return;
-      }
-
-      recorder.onstart = () => {
-        setRecordStatus('录音中…', 'status-ok');
-        setButtons();
-        log('录音已开始', {
-          mode: currentModeKey,
-          mimeType: recorder.mimeType || recordMimeType || 'browser-default'
-        });
-      };
-
-      recorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          recordChunks.push(event.data);
-          log('收到录音数据分片', { size: event.data.size, type: event.data.type || recorder.mimeType || recordMimeType || 'unknown' });
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setAction("getCurrentPosition success");
+          print(formatPosition(pos));
+        },
+        (err) => {
+          setAction("getCurrentPosition error");
+          print(formatError(err));
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0
         }
-      };
-
-      recorder.onerror = (event) => {
-        const err = event.error || {};
-        setRecordStatus('录音错误：' + (err.name || 'unknown'), 'status-err');
-        log('MediaRecorder 错误', { name: err.name, message: err.message });
-        setButtons();
-      };
-
-      recorder.onstop = () => {
-        const finalType = recorder.mimeType || recordMimeType || 'audio/webm';
-        const blob = new Blob(recordChunks, { type: finalType });
-        cleanupAudioUrl();
-        audioObjectUrl = URL.createObjectURL(blob);
-        el.audioPlayback.src = audioObjectUrl;
-        el.audioPlayback.load();
-        setRecordStatus('录音已停止，可回放', 'status-warn');
-        setButtons();
-        log('录音已停止并生成 Blob', {
-          mode: currentModeKey,
-          mimeType: finalType,
-          chunkCount: recordChunks.length,
-          totalBytes: blob.size
-        });
-      };
-
-      recorder.start(500);
+      );
     }
 
-    function stopRecording() {
-      if (!recorder || recorder.state === 'inactive') {
-        log('当前没有进行中的录音');
+    function watchLocation() {
+      if (!navigator.geolocation) {
+        print("navigator.geolocation unavailable");
         return;
       }
-      recorder.stop();
+
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+      }
+
+      setAction("watchPosition");
+      print("watching geolocation...");
+
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          setAction("watchPosition success");
+          print(formatPosition(pos));
+        },
+        (err) => {
+          setAction("watchPosition error");
+          print(formatError(err));
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0
+        }
+      );
     }
 
-    el.btnVideoOnly.addEventListener('click', () => requestMedia('videoOnly'));
-    el.btnAudioOnly.addEventListener('click', () => requestMedia('audioOnly'));
-    el.btnVideoAudio.addEventListener('click', () => requestMedia('videoAudio'));
-    el.btnSnapshot.addEventListener('click', () => captureSnapshot('manual'));
-    el.btnRecord.addEventListener('click', startRecording);
-    el.btnStopRecord.addEventListener('click', stopRecording);
-    el.btnStopAll.addEventListener('click', stopAllDevices);
-    el.btnClear.addEventListener('click', () => { el.log.textContent = ''; });
+    currentUrl.textContent = location.href;
+    userAgent.textContent = navigator.userAgent;
+    refreshPermissionState();
 
-    window.addEventListener('beforeunload', () => {
-      if (snapshotTimer) {
-        clearTimeout(snapshotTimer);
-        snapshotTimer = null;
-      }
-      if (recorder && recorder.state !== 'inactive') {
-        recorder.stop();
-      }
-      stopTracksOnly();
-      cleanupAudioUrl();
+    btnRequest.addEventListener("click", requestLocation);
+    btnWatch.addEventListener("click", watchLocation);
+
+    window.addEventListener("load", () => {
+      requestLocation();
     });
-
-    refreshEnv();
-    clearCanvas();
-    setButtons();
-    log('浏览器媒体能力检测', getSupportInfo());
-    log('页面已加载，请依次点击“仅摄像头 / 仅麦克风 / 摄像头+麦克风”进行对照测试');
   </script>
 </body>
 </html>
