@@ -1,18 +1,22 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>DZZP Geolocation PoC</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DZZP WebView Universal Tester</title>
   <style>
     :root {
-      --bg: #f7f2e8;
-      --panel: #fffdf8;
-      --ink: #1f1a17;
-      --muted: #6a615a;
-      --accent: #c4572d;
-      --accent-2: #2f6f62;
-      --border: #d8cbb8;
+      --bg: #efe7da;
+      --paper: #fffaf2;
+      --paper-2: #fff;
+      --ink: #241d18;
+      --muted: #71675f;
+      --border: #d8c7b1;
+      --accent: #bf552d;
+      --accent-2: #2e7869;
+      --accent-3: #305f95;
+      --danger: #992f2f;
+      --shadow: rgba(66, 43, 24, 0.08);
     }
 
     * {
@@ -25,183 +29,499 @@
       font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
       color: var(--ink);
       background:
-        radial-gradient(circle at top left, #f4d7b8 0, transparent 28%),
-        radial-gradient(circle at bottom right, #d8e7df 0, transparent 24%),
-        var(--bg);
-      padding: 24px;
+        radial-gradient(circle at top left, #f4dbc0 0, transparent 24%),
+        radial-gradient(circle at top right, #d6ece5 0, transparent 22%),
+        linear-gradient(180deg, #f7f0e4 0%, #efe7da 100%);
     }
 
-    .card {
-      max-width: 860px;
+    .wrap {
+      max-width: 980px;
       margin: 0 auto;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 28px;
-      box-shadow: 0 18px 50px rgba(44, 31, 20, 0.08);
+      padding: 24px 16px 40px;
     }
 
-    h1 {
+    .hero,
+    .panel {
+      background: rgba(255, 250, 242, 0.96);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: 0 18px 45px var(--shadow);
+    }
+
+    .hero {
+      padding: 24px;
+      margin-bottom: 18px;
+    }
+
+    .hero h1 {
       margin: 0 0 10px;
-      font-size: 32px;
+      font-size: 30px;
       line-height: 1.1;
     }
 
-    .sub {
-      margin: 0 0 20px;
+    .hero p {
+      margin: 0;
+      line-height: 1.7;
       color: var(--muted);
     }
 
-    .banner {
-      margin: 18px 0 22px;
-      padding: 14px 16px;
-      border-left: 5px solid var(--accent);
-      background: #fff4eb;
-      border-radius: 12px;
-      color: #6d341d;
+    .grid {
+      display: grid;
+      grid-template-columns: 1.05fr 1fr;
+      gap: 18px;
+      margin-bottom: 18px;
     }
 
-    .row {
+    .panel {
+      padding: 18px;
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+
+    .meta-list {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .meta-list li {
+      padding: 13px 14px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--paper-2);
+      word-break: break-word;
+      line-height: 1.55;
+    }
+
+    .label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .mode-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .tab {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px 12px;
+      background: #fff;
+      cursor: pointer;
+      text-align: left;
+      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+    }
+
+    .tab:hover {
+      transform: translateY(-1px);
+    }
+
+    .tab.active {
+      background: #fff4eb;
+      border-color: #cc916f;
+    }
+
+    .tab-title {
+      display: block;
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .tab-desc {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .actions {
       display: flex;
-      gap: 12px;
       flex-wrap: wrap;
-      margin: 20px 0;
+      gap: 10px;
+      margin-bottom: 14px;
     }
 
     button {
       border: 0;
       border-radius: 999px;
       padding: 12px 18px;
-      font-size: 15px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
       cursor: pointer;
       transition: transform 120ms ease, opacity 120ms ease;
     }
 
-    button:hover {
+    button:hover:not(:disabled) {
       transform: translateY(-1px);
     }
 
-    .primary {
-      background: var(--accent);
-      color: #fff;
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
     }
 
-    .secondary {
-      background: var(--accent-2);
-      color: #fff;
-    }
+    .btn-primary { background: var(--accent); }
+    .btn-secondary { background: var(--accent-2); }
+    .btn-tertiary { background: var(--accent-3); }
+    .btn-danger { background: var(--danger); }
+    .btn-muted { background: #7e776e; }
 
-    .meta {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
-      margin: 18px 0 22px;
-    }
-
-    .tile {
-      border: 1px solid var(--border);
+    .hint {
+      padding: 14px 16px;
+      border-left: 5px solid var(--accent);
       border-radius: 14px;
-      padding: 14px;
-      background: #fff;
+      background: #fff1e8;
+      color: #6a3a22;
+      line-height: 1.65;
     }
 
-    .tile .label {
+    .section {
+      display: none;
+      margin-top: 16px;
+    }
+
+    .section.active {
       display: block;
-      font-size: 12px;
-      color: var(--muted);
-      margin-bottom: 8px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
     }
 
-    .tile .value {
-      font-size: 16px;
-      word-break: break-word;
+    .section-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+    }
+
+    .card h3 {
+      margin: 0 0 10px;
+      font-size: 15px;
+    }
+
+    video,
+    canvas,
+    audio {
+      width: 100%;
+      border-radius: 14px;
+      background: #0f0d0c;
+    }
+
+    video,
+    canvas {
+      min-height: 230px;
+      object-fit: cover;
+    }
+
+    .mono {
+      font-family: Consolas, "SFMono-Regular", Menlo, monospace;
+      font-size: 12px;
+      line-height: 1.6;
     }
 
     pre {
       margin: 0;
-      padding: 18px;
-      min-height: 220px;
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      background: #161311;
-      color: #f4efe8;
-      overflow: auto;
       white-space: pre-wrap;
       word-break: break-word;
-      line-height: 1.5;
+      max-height: 360px;
+      overflow: auto;
+      padding: 16px;
+      border-radius: 16px;
+      border: 1px solid #3f372f;
+      background: #171311;
+      color: #f7f2eb;
+    }
+
+    .preview-image {
+      display: block;
+      width: 100%;
+      min-height: 230px;
+      border-radius: 14px;
+      object-fit: contain;
+      background: #171311;
+      border: 1px dashed #56483d;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #ece4d8;
+      color: #584d45;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .log-panel {
+      margin-top: 18px;
+    }
+
+    @media (max-width: 860px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     @media (max-width: 640px) {
-      body {
-        padding: 14px;
+      .mode-tabs {
+        grid-template-columns: 1fr;
       }
 
-      .card {
-        padding: 18px;
-        border-radius: 16px;
-      }
-
-      h1 {
+      .hero h1 {
         font-size: 26px;
       }
     }
   </style>
 </head>
 <body>
-  <main class="card">
-    <h1>DZZP Geolocation PoC</h1>
-    <p class="sub">页面加载后会自动调用 HTML5 Geolocation，并把结果直接显示在本页。</p>
+  <div class="wrap">
+    <section class="hero">
+      <h1>DZZP WebView Universal Tester</h1>
+      <p>
+        一个通用测试页，统一验证 <strong>地理位置</strong>、<strong>摄像头拍照</strong>、<strong>麦克风录音</strong> 三类能力。
+        页面只在本地展示结果，不做外传，适合录屏和手动复现。
+      </p>
+    </section>
 
-    <div class="banner">
-      预期现象：如果外部链接进入业务 WebView 后没有二次确认，这个页面会直接拿到定位结果。
+    <div class="grid">
+      <section class="panel">
+        <h2>页面环境</h2>
+        <ul class="meta-list mono">
+          <li><span class="label">Current URL</span><span id="currentUrl">-</span></li>
+          <li><span class="label">Secure Context</span><span id="secureState">-</span></li>
+          <li><span class="label">User Agent</span><span id="ua">-</span></li>
+          <li><span class="label">Active Mode</span><span id="activeMode">地理位置</span></li>
+          <li><span class="label">Permission API</span><span id="permissionApiState">checking</span></li>
+          <li><span class="label">Last Action</span><span id="lastAction">page loaded</span></li>
+        </ul>
+      </section>
+
+      <section class="panel">
+        <h2>测试模式</h2>
+        <div class="mode-tabs">
+          <button class="tab active" id="tabGeo" data-mode="geo">
+            <span class="tab-title">地理位置</span>
+            <span class="tab-desc">调用 HTML5 Geolocation，展示经纬度与精度。</span>
+          </button>
+          <button class="tab" id="tabCamera" data-mode="camera">
+            <span class="tab-title">摄像头</span>
+            <span class="tab-desc">打开摄像头预览，点击后抓拍并展示照片。</span>
+          </button>
+          <button class="tab" id="tabMic" data-mode="mic">
+            <span class="tab-title">麦克风</span>
+            <span class="tab-desc">打开麦克风，录一段音并在本页回放。</span>
+          </button>
+        </div>
+
+        <div class="actions">
+          <button class="btn-primary" id="btnRun">执行当前测试</button>
+          <button class="btn-secondary" id="btnStop">停止当前设备</button>
+          <button class="btn-tertiary" id="btnRecord" disabled>开始录音</button>
+          <button class="btn-secondary" id="btnStopRecord" disabled>停止录音</button>
+          <button class="btn-tertiary" id="btnSnapshot" disabled>拍照</button>
+          <button class="btn-muted" id="btnClear">清空结果</button>
+          <button class="btn-danger" id="btnClearLog">清空日志</button>
+        </div>
+
+        <div class="hint">
+          录屏时建议展示三步：<br>
+          1. 外部链接把页面拉进目标 App WebView。<br>
+          2. 点击相应测试按钮。<br>
+          3. 页面直接显示定位结果、照片或录音回放，且无额外业务侧二次确认。
+        </div>
+      </section>
     </div>
 
-    <section class="meta">
-      <div class="tile">
-        <span class="label">Current URL</span>
-        <span class="value" id="current-url">-</span>
+    <section class="panel">
+      <div class="section active" id="sectionGeo">
+        <h2>地理位置结果 <span class="status" id="geoStatus">idle</span></h2>
+        <div class="section-grid">
+          <div class="card">
+            <h3>返回数据</h3>
+            <pre id="geoOutput">waiting...</pre>
+          </div>
+        </div>
       </div>
-      <div class="tile">
-        <span class="label">User Agent</span>
-        <span class="value" id="user-agent">-</span>
+
+      <div class="section" id="sectionCamera">
+        <h2>摄像头结果 <span class="status" id="cameraStatus">idle</span></h2>
+        <div class="section-grid">
+          <div class="card">
+            <h3>实时预览</h3>
+            <video id="cameraPreview" autoplay playsinline muted></video>
+          </div>
+          <div class="card">
+            <h3>抓拍照片</h3>
+            <canvas id="snapshotCanvas" width="720" height="540" style="display:none;"></canvas>
+            <img id="snapshotImage" class="preview-image" alt="snapshot preview">
+          </div>
+        </div>
       </div>
-      <div class="tile">
-        <span class="label">Permission State</span>
-        <span class="value" id="perm-state">checking</span>
-      </div>
-      <div class="tile">
-        <span class="label">Last Action</span>
-        <span class="value" id="last-action">page loaded</span>
+
+      <div class="section" id="sectionMic">
+        <h2>麦克风结果 <span class="status" id="micStatus">idle</span></h2>
+        <div class="section-grid">
+          <div class="card">
+            <h3>录音信息</h3>
+            <pre id="micOutput">waiting...</pre>
+          </div>
+          <div class="card">
+            <h3>录音回放</h3>
+            <audio id="audioPlayback" controls></audio>
+          </div>
+        </div>
       </div>
     </section>
 
-    <div class="row">
-      <button class="primary" id="btn-request">读取当前位置</button>
-      <button class="secondary" id="btn-watch">持续监听位置</button>
-    </div>
-
-    <pre id="output">waiting...</pre>
-  </main>
+    <section class="panel log-panel">
+      <h2>统一日志</h2>
+      <pre id="log">waiting...</pre>
+    </section>
+  </div>
 
   <script>
-    const output = document.getElementById("output");
-    const currentUrl = document.getElementById("current-url");
-    const userAgent = document.getElementById("user-agent");
-    const permState = document.getElementById("perm-state");
-    const lastAction = document.getElementById("last-action");
-    const btnRequest = document.getElementById("btn-request");
-    const btnWatch = document.getElementById("btn-watch");
+    const currentUrl = document.getElementById("currentUrl");
+    const secureState = document.getElementById("secureState");
+    const ua = document.getElementById("ua");
+    const activeModeText = document.getElementById("activeMode");
+    const permissionApiState = document.getElementById("permissionApiState");
+    const lastAction = document.getElementById("lastAction");
+    const logNode = document.getElementById("log");
 
-    let watchId = null;
+    const geoOutput = document.getElementById("geoOutput");
+    const micOutput = document.getElementById("micOutput");
+    const cameraPreview = document.getElementById("cameraPreview");
+    const snapshotCanvas = document.getElementById("snapshotCanvas");
+    const snapshotImage = document.getElementById("snapshotImage");
+    const audioPlayback = document.getElementById("audioPlayback");
+
+    const geoStatus = document.getElementById("geoStatus");
+    const cameraStatus = document.getElementById("cameraStatus");
+    const micStatus = document.getElementById("micStatus");
+
+    const btnRun = document.getElementById("btnRun");
+    const btnStop = document.getElementById("btnStop");
+    const btnRecord = document.getElementById("btnRecord");
+    const btnStopRecord = document.getElementById("btnStopRecord");
+    const btnSnapshot = document.getElementById("btnSnapshot");
+    const btnClear = document.getElementById("btnClear");
+    const btnClearLog = document.getElementById("btnClearLog");
+
+    const tabs = Array.from(document.querySelectorAll(".tab"));
+    const sections = {
+      geo: document.getElementById("sectionGeo"),
+      camera: document.getElementById("sectionCamera"),
+      mic: document.getElementById("sectionMic")
+    };
+
+    let activeMode = "geo";
+    let mediaStream = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let geoWatchId = null;
+
+    function now() {
+      return new Date().toISOString();
+    }
+
+    function appendLog(message, data) {
+      const line = `[${now()}] ${message}`;
+      const payload = data === undefined ? "" : `\n${typeof data === "string" ? data : JSON.stringify(data, null, 2)}`;
+      logNode.textContent = `${line}${payload}\n\n${logNode.textContent === "waiting..." ? "" : logNode.textContent}`;
+    }
 
     function setAction(text) {
       lastAction.textContent = text;
     }
 
-    function print(data) {
-      output.textContent = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+    function setMode(mode) {
+      activeMode = mode;
+      const labelMap = {
+        geo: "地理位置",
+        camera: "摄像头",
+        mic: "麦克风"
+      };
+
+      activeModeText.textContent = labelMap[mode];
+
+      tabs.forEach((tab) => {
+        tab.classList.toggle("active", tab.dataset.mode === mode);
+      });
+
+      Object.entries(sections).forEach(([key, section]) => {
+        section.classList.toggle("active", key === mode);
+      });
+
+      btnSnapshot.disabled = mode !== "camera";
+      btnRecord.disabled = mode !== "mic" || !mediaStream || !mediaStream.getAudioTracks().length;
+      btnStopRecord.disabled = true;
+      setAction(`switch mode: ${labelMap[mode]}`);
+      appendLog(`switch mode -> ${mode}`);
+    }
+
+    function resetGeoOutput() {
+      geoOutput.textContent = "waiting...";
+      geoStatus.textContent = "idle";
+    }
+
+    function resetMicOutput() {
+      micOutput.textContent = "waiting...";
+      micStatus.textContent = "idle";
+      audioPlayback.removeAttribute("src");
+      audioPlayback.load();
+    }
+
+    function resetCameraOutput() {
+      cameraStatus.textContent = "idle";
+      snapshotImage.removeAttribute("src");
+    }
+
+    function stopGeoWatch() {
+      if (geoWatchId !== null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(geoWatchId);
+        geoWatchId = null;
+      }
+    }
+
+    function stopMediaStream() {
+      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+      }
+
+      if (mediaStream) {
+        mediaStream.getTracks().forEach((track) => track.stop());
+      }
+
+      mediaStream = null;
+      mediaRecorder = null;
+      cameraPreview.srcObject = null;
+      btnRecord.disabled = activeMode !== "mic";
+      btnStopRecord.disabled = true;
+    }
+
+    function stopCurrentDevice() {
+      stopGeoWatch();
+      stopMediaStream();
+      setAction("stop current device");
+      appendLog("stop current device");
     }
 
     function formatPosition(pos) {
@@ -218,49 +538,62 @@
       };
     }
 
-    function formatError(err) {
+    function formatPositionError(err) {
       return {
         code: err.code,
         message: err.message,
         name: err.name || "PositionError",
-        time: new Date().toISOString()
+        time: now()
       };
     }
 
     async function refreshPermissionState() {
       if (!navigator.permissions || !navigator.permissions.query) {
-        permState.textContent = "unsupported";
+        permissionApiState.textContent = "unsupported";
         return;
       }
 
       try {
-        const status = await navigator.permissions.query({ name: "geolocation" });
-        permState.textContent = status.state;
+        const target = activeMode === "geo" ? "geolocation" : activeMode === "camera" ? "camera" : "microphone";
+        const status = await navigator.permissions.query({ name: target });
+        permissionApiState.textContent = `${target}: ${status.state}`;
         status.onchange = () => {
-          permState.textContent = status.state;
+          permissionApiState.textContent = `${target}: ${status.state}`;
         };
       } catch (err) {
-        permState.textContent = "query-failed";
+        permissionApiState.textContent = "query-failed";
       }
     }
 
-    function requestLocation() {
+    function runGeoTest() {
+      stopCurrentDevice();
+      resetGeoOutput();
+      geoStatus.textContent = "requesting";
       setAction("getCurrentPosition");
-      print("requesting geolocation...");
+      appendLog("request geolocation");
 
       if (!navigator.geolocation) {
-        print("navigator.geolocation unavailable");
+        const msg = "navigator.geolocation unavailable";
+        geoOutput.textContent = msg;
+        geoStatus.textContent = "unsupported";
+        appendLog(msg);
         return;
       }
 
       navigator.geolocation.getCurrentPosition(
         (pos) => {
+          const result = formatPosition(pos);
+          geoOutput.textContent = JSON.stringify(result, null, 2);
+          geoStatus.textContent = "success";
           setAction("getCurrentPosition success");
-          print(formatPosition(pos));
+          appendLog("geolocation success", result);
         },
         (err) => {
+          const result = formatPositionError(err);
+          geoOutput.textContent = JSON.stringify(result, null, 2);
+          geoStatus.textContent = "error";
           setAction("getCurrentPosition error");
-          print(formatError(err));
+          appendLog("geolocation error", result);
         },
         {
           enableHighAccuracy: true,
@@ -270,47 +603,210 @@
       );
     }
 
-    function watchLocation() {
-      if (!navigator.geolocation) {
-        print("navigator.geolocation unavailable");
+    async function runCameraTest() {
+      stopCurrentDevice();
+      resetCameraOutput();
+      cameraStatus.textContent = "requesting";
+      setAction("request camera");
+      appendLog("request camera stream");
+
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: "user"
+          },
+          audio: false
+        });
+
+        cameraPreview.srcObject = mediaStream;
+        cameraStatus.textContent = "streaming";
+        btnSnapshot.disabled = false;
+        appendLog("camera stream success", {
+          videoTracks: mediaStream.getVideoTracks().map((track) => ({
+            label: track.label,
+            enabled: track.enabled,
+            readyState: track.readyState
+          }))
+        });
+      } catch (err) {
+        cameraStatus.textContent = "error";
+        appendLog("camera stream error", {
+          name: err.name,
+          message: err.message
+        });
+      }
+    }
+
+    async function runMicTest() {
+      stopCurrentDevice();
+      resetMicOutput();
+      micStatus.textContent = "requesting";
+      setAction("request microphone");
+      appendLog("request microphone stream");
+
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: false
+        });
+
+        micStatus.textContent = "ready";
+        btnRecord.disabled = false;
+        appendLog("microphone stream success", {
+          audioTracks: mediaStream.getAudioTracks().map((track) => ({
+            label: track.label,
+            enabled: track.enabled,
+            readyState: track.readyState
+          }))
+        });
+      } catch (err) {
+        micStatus.textContent = "error";
+        btnRecord.disabled = true;
+        appendLog("microphone stream error", {
+          name: err.name,
+          message: err.message
+        });
+      }
+    }
+
+    function takeSnapshot() {
+      if (!mediaStream || !mediaStream.getVideoTracks().length) {
+        appendLog("snapshot skipped: no active video stream");
         return;
       }
 
-      if (watchId !== null) {
-        navigator.geolocation.clearWatch(watchId);
-        watchId = null;
-      }
+      const ctx = snapshotCanvas.getContext("2d");
+      const width = cameraPreview.videoWidth || 720;
+      const height = cameraPreview.videoHeight || 540;
 
-      setAction("watchPosition");
-      print("watching geolocation...");
+      snapshotCanvas.width = width;
+      snapshotCanvas.height = height;
+      ctx.drawImage(cameraPreview, 0, 0, width, height);
 
-      watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-          setAction("watchPosition success");
-          print(formatPosition(pos));
-        },
-        (err) => {
-          setAction("watchPosition error");
-          print(formatError(err));
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 0
-        }
-      );
+      const dataUrl = snapshotCanvas.toDataURL("image/jpeg", 0.92);
+      snapshotImage.src = dataUrl;
+      cameraStatus.textContent = "captured";
+      setAction("snapshot success");
+      appendLog("snapshot success", {
+        width,
+        height,
+        capturedAt: now()
+      });
     }
 
-    currentUrl.textContent = location.href;
-    userAgent.textContent = navigator.userAgent;
-    refreshPermissionState();
+    function startRecording() {
+      if (!mediaStream || !mediaStream.getAudioTracks().length) {
+        appendLog("record skipped: no active audio stream");
+        return;
+      }
 
-    btnRequest.addEventListener("click", requestLocation);
-    btnWatch.addEventListener("click", watchLocation);
+      recordedChunks = [];
 
-    window.addEventListener("load", () => {
-      requestLocation();
+      try {
+        mediaRecorder = new MediaRecorder(mediaStream);
+      } catch (err) {
+        appendLog("mediaRecorder init error", {
+          name: err.name,
+          message: err.message
+        });
+        return;
+      }
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          recordedChunks.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstart = () => {
+        micStatus.textContent = "recording";
+        btnRecord.disabled = true;
+        btnStopRecord.disabled = false;
+        setAction("recording started");
+        appendLog("recording started");
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || "audio/webm" });
+        const url = URL.createObjectURL(blob);
+        audioPlayback.src = url;
+        micOutput.textContent = JSON.stringify({
+          mimeType: mediaRecorder.mimeType || "audio/webm",
+          size: blob.size,
+          chunkCount: recordedChunks.length,
+          recordedAt: now()
+        }, null, 2);
+        micStatus.textContent = "recorded";
+        btnRecord.disabled = false;
+        btnStopRecord.disabled = true;
+        setAction("recording stopped");
+        appendLog("recording stopped", {
+          mimeType: mediaRecorder.mimeType || "audio/webm",
+          size: blob.size,
+          chunkCount: recordedChunks.length
+        });
+      };
+
+      mediaRecorder.start();
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+      }
+    }
+
+    function runCurrentMode() {
+      refreshPermissionState();
+
+      if (activeMode === "geo") {
+        runGeoTest();
+        return;
+      }
+
+      if (activeMode === "camera") {
+        runCameraTest();
+        return;
+      }
+
+      runMicTest();
+    }
+
+    function clearCurrentResults() {
+      resetGeoOutput();
+      resetMicOutput();
+      resetCameraOutput();
+      setAction("clear result");
+      appendLog("clear result");
+    }
+
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        setMode(tab.dataset.mode);
+        refreshPermissionState();
+      });
     });
+
+    btnRun.addEventListener("click", runCurrentMode);
+    btnStop.addEventListener("click", stopCurrentDevice);
+    btnSnapshot.addEventListener("click", takeSnapshot);
+    btnRecord.addEventListener("click", startRecording);
+    btnStopRecord.addEventListener("click", stopRecording);
+    btnClear.addEventListener("click", clearCurrentResults);
+    btnClearLog.addEventListener("click", () => {
+      logNode.textContent = "waiting...";
+    });
+
+    currentUrl.textContent = location.href;
+    secureState.textContent = window.isSecureContext ? "true" : "false";
+    ua.textContent = navigator.userAgent;
+    snapshotImage.alt = "no snapshot yet";
+    appendLog("page loaded", {
+      href: location.href,
+      secureContext: window.isSecureContext,
+      userAgent: navigator.userAgent
+    });
+    refreshPermissionState();
   </script>
 </body>
 </html>
