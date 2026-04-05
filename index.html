@@ -3,302 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DZZP WebView Universal Tester</title>
+  <title>WebView 通用能力测试页</title>
   <style>
-    :root {
-      --bg: #efe7da;
-      --paper: #fffaf2;
-      --paper-2: #fff;
-      --ink: #241d18;
-      --muted: #71675f;
-      --border: #d8c7b1;
-      --accent: #bf552d;
-      --accent-2: #2e7869;
-      --accent-3: #305f95;
-      --danger: #992f2f;
-      --shadow: rgba(66, 43, 24, 0.08);
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-      color: var(--ink);
-      background:
-        radial-gradient(circle at top left, #f4dbc0 0, transparent 24%),
-        radial-gradient(circle at top right, #d6ece5 0, transparent 22%),
-        linear-gradient(180deg, #f7f0e4 0%, #efe7da 100%);
-    }
-
-    .wrap {
-      max-width: 980px;
-      margin: 0 auto;
-      padding: 24px 16px 40px;
-    }
-
-    .hero,
-    .panel {
-      background: rgba(255, 250, 242, 0.96);
-      border: 1px solid var(--border);
-      border-radius: 22px;
-      box-shadow: 0 18px 45px var(--shadow);
-    }
-
-    .hero {
-      padding: 24px;
-      margin-bottom: 18px;
-    }
-
-    .hero h1 {
-      margin: 0 0 10px;
-      font-size: 30px;
-      line-height: 1.1;
-    }
-
-    .hero p {
-      margin: 0;
-      line-height: 1.7;
-      color: var(--muted);
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: 1.05fr 1fr;
-      gap: 18px;
-      margin-bottom: 18px;
-    }
-
-    .panel {
-      padding: 18px;
-    }
-
-    .panel h2 {
-      margin: 0 0 14px;
-      font-size: 18px;
-    }
-
-    .meta-list {
-      display: grid;
-      gap: 10px;
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    .meta-list li {
-      padding: 13px 14px;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      background: var(--paper-2);
-      word-break: break-word;
-      line-height: 1.55;
-    }
-
-    .label {
-      display: block;
-      font-size: 12px;
-      color: var(--muted);
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-    }
-
-    .mode-tabs {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin-bottom: 14px;
-    }
-
-    .tab {
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 14px 12px;
-      background: #fff;
-      cursor: pointer;
-      text-align: left;
-      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
-    }
-
-    .tab:hover {
-      transform: translateY(-1px);
-    }
-
-    .tab.active {
-      background: #fff4eb;
-      border-color: #cc916f;
-    }
-
-    .tab-title {
-      display: block;
-      font-size: 15px;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-
-    .tab-desc {
-      display: block;
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.45;
-    }
-
-    .actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 14px;
-    }
-
-    button {
-      border: 0;
-      border-radius: 999px;
-      padding: 12px 18px;
-      font-size: 14px;
-      font-weight: 600;
-      color: #fff;
-      cursor: pointer;
-      transition: transform 120ms ease, opacity 120ms ease;
-    }
-
-    button:hover:not(:disabled) {
-      transform: translateY(-1px);
-    }
-
-    button:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .btn-primary { background: var(--accent); }
-    .btn-secondary { background: var(--accent-2); }
-    .btn-tertiary { background: var(--accent-3); }
-    .btn-danger { background: var(--danger); }
-    .btn-muted { background: #7e776e; }
-
-    .hint {
-      padding: 14px 16px;
-      border-left: 5px solid var(--accent);
-      border-radius: 14px;
-      background: #fff1e8;
-      color: #6a3a22;
-      line-height: 1.65;
-    }
-
-    .section {
-      display: none;
-      margin-top: 16px;
-    }
-
-    .section.active {
-      display: block;
-    }
-
-    .section-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 16px;
-    }
-
-    .card {
-      background: rgba(255, 255, 255, 0.82);
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 16px;
-    }
-
-    .card h3 {
-      margin: 0 0 10px;
-      font-size: 15px;
-    }
-
-    video,
-    canvas,
-    audio {
-      width: 100%;
-      border-radius: 14px;
-      background: #0f0d0c;
-    }
-
-    video,
-    canvas {
-      min-height: 230px;
-      object-fit: cover;
-    }
-
-    .mono {
-      font-family: Consolas, "SFMono-Regular", Menlo, monospace;
-      font-size: 12px;
-      line-height: 1.6;
-    }
-
-    pre {
-      margin: 0;
-      white-space: pre-wrap;
-      word-break: break-word;
-      max-height: 360px;
-      overflow: auto;
-      padding: 16px;
-      border-radius: 16px;
-      border: 1px solid #3f372f;
-      background: #171311;
-      color: #f7f2eb;
-    }
-
-    .preview-image {
-      display: block;
-      width: 100%;
-      min-height: 230px;
-      border-radius: 14px;
-      object-fit: contain;
-      background: #171311;
-      border: 1px dashed #56483d;
-    }
-
-    .status {
-      display: inline-block;
-      padding: 6px 10px;
-      border-radius: 999px;
-      background: #ece4d8;
-      color: #584d45;
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .log-panel {
-      margin-top: 18px;
-    }
-
-    @media (max-width: 860px) {
-      .grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    @media (max-width: 640px) {
-      .mode-tabs {
-        grid-template-columns: 1fr;
-      }
-
-      .hero h1 {
-        font-size: 26px;
-      }
-    }
+    :root{--bg:#efe7da;--paper:rgba(255,250,242,.96);--ink:#241d18;--muted:#71675f;--border:#d8c7b1;--a:#bf552d;--b:#2e7869;--c:#305f95;--d:#992f2f;--shadow:rgba(66,43,24,.08);--dark:#171311}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);background:radial-gradient(circle at top left,#f4dbc0 0,transparent 24%),radial-gradient(circle at top right,#d6ece5 0,transparent 22%),linear-gradient(180deg,#f7f0e4 0%,#efe7da 100%)}
+    .wrap{max-width:1120px;margin:0 auto;padding:24px 16px 40px}.hero,.panel{background:var(--paper);border:1px solid var(--border);border-radius:22px;box-shadow:0 18px 45px var(--shadow)}.hero{padding:24px;margin-bottom:18px}.hero h1{margin:0 0 10px;font-size:30px}.hero p{margin:0;line-height:1.7;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:1.05fr 1fr;gap:18px;margin-bottom:18px}.panel{padding:18px}.panel h2,.card h3{margin:0 0 12px}.meta-list{display:grid;gap:10px;margin:0;padding:0;list-style:none}.meta-list li,.card{padding:14px;border:1px solid var(--border);border-radius:16px;background:#fff}.label{display:block;font-size:12px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+    .mode-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}.tab{border:1px solid var(--border);border-radius:16px;padding:14px 12px;background:#fff;cursor:pointer;text-align:left}.tab.active{background:#fff4eb;border-color:#cc916f}.tab-title{display:block;font-size:15px;font-weight:700;margin-bottom:4px}.tab-desc{display:block;font-size:12px;color:var(--muted);line-height:1.45}
+    .actions,.picker-actions{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}button{border:0;border-radius:999px;padding:12px 18px;font-size:14px;font-weight:600;color:#fff;cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}.p{background:var(--a)}.s{background:var(--b)}.t{background:var(--c)}.m{background:#7e776e}.x{background:var(--d)}
+    .hint{padding:14px 16px;border-left:5px solid var(--a);border-radius:14px;background:#fff1e8;color:#6a3a22;line-height:1.65}.section{display:none;margin-top:16px}.section.active{display:block}.section-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+    pre,video,canvas,audio,.preview-image,.file-video{width:100%;border-radius:14px;background:#0f0d0c}.preview-image,.file-video{display:block;min-height:230px;object-fit:contain;border:1px dashed #56483d}.preview-image{background:var(--dark)}video,canvas{min-height:230px;object-fit:cover}
+    .mono{font-family:Consolas,"SFMono-Regular",Menlo,monospace;font-size:12px;line-height:1.6}pre{margin:0;white-space:pre-wrap;word-break:break-word;max-height:360px;overflow:auto;padding:16px;border:1px solid #3f372f;color:#f7f2eb}.status,.pill{display:inline-block;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700}.status{background:#ece4d8;color:#584d45}.pill{background:#f0e6da;color:#5a4a3d;margin-right:8px;margin-bottom:8px}.log-panel{margin-top:18px}.hidden{display:none}.summary{display:grid;gap:8px;margin-top:12px;color:var(--muted);font-size:13px;line-height:1.6}
+    @media (max-width:860px){.grid{grid-template-columns:1fr}}@media (max-width:720px){.mode-tabs{grid-template-columns:1fr 1fr}}@media (max-width:520px){.mode-tabs{grid-template-columns:1fr}.hero h1{font-size:26px}}
   </style>
 </head>
 <body>
   <div class="wrap">
     <section class="hero">
-      <h1>DZZP WebView Universal Tester</h1>
-      <p>
-        一个通用测试页，统一验证 <strong>地理位置</strong>、<strong>摄像头拍照</strong>、<strong>麦克风录音</strong> 三类能力。
-        页面只在本地展示结果，不做外传，适合录屏和手动复现。
-      </p>
+      <h1>WebView 通用能力测试页</h1>
+      <p>统一验证地理位置、摄像头、麦克风和文件选择器。结果只在当前页面展示，适合录屏、截图和手工复现。</p>
     </section>
 
     <div class="grid">
@@ -317,35 +40,22 @@
       <section class="panel">
         <h2>测试模式</h2>
         <div class="mode-tabs">
-          <button class="tab active" id="tabGeo" data-mode="geo">
-            <span class="tab-title">地理位置</span>
-            <span class="tab-desc">调用 HTML5 Geolocation，展示经纬度与精度。</span>
-          </button>
-          <button class="tab" id="tabCamera" data-mode="camera">
-            <span class="tab-title">摄像头</span>
-            <span class="tab-desc">打开摄像头预览，点击后抓拍并展示照片。</span>
-          </button>
-          <button class="tab" id="tabMic" data-mode="mic">
-            <span class="tab-title">麦克风</span>
-            <span class="tab-desc">打开麦克风，录一段音并在本页回放。</span>
-          </button>
+          <button class="tab active" data-mode="geo"><span class="tab-title">地理位置</span><span class="tab-desc">展示经纬度和精度。</span></button>
+          <button class="tab" data-mode="camera"><span class="tab-title">摄像头</span><span class="tab-desc">预览并抓拍照片。</span></button>
+          <button class="tab" data-mode="mic"><span class="tab-title">麦克风</span><span class="tab-desc">录一段音并回放。</span></button>
+          <button class="tab" data-mode="file"><span class="tab-title">文件选择器</span><span class="tab-desc">测试图片、视频和通用文件。</span></button>
         </div>
-
         <div class="actions">
-          <button class="btn-primary" id="btnRun">执行当前测试</button>
-          <button class="btn-secondary" id="btnStop">停止当前设备</button>
-          <button class="btn-tertiary" id="btnRecord" disabled>开始录音</button>
-          <button class="btn-secondary" id="btnStopRecord" disabled>停止录音</button>
-          <button class="btn-tertiary" id="btnSnapshot" disabled>拍照</button>
-          <button class="btn-muted" id="btnClear">清空结果</button>
-          <button class="btn-danger" id="btnClearLog">清空日志</button>
+          <button class="p" id="btnRun">执行当前测试</button>
+          <button class="s" id="btnStop">停止当前设备</button>
+          <button class="t" id="btnRecord" disabled>开始录音</button>
+          <button class="s" id="btnStopRecord" disabled>停止录音</button>
+          <button class="t" id="btnSnapshot" disabled>拍照</button>
+          <button class="m" id="btnClear">清空结果</button>
+          <button class="x" id="btnClearLog">清空日志</button>
         </div>
-
         <div class="hint">
-          录屏时建议展示三步：<br>
-          1. 外部链接把页面拉进目标 App WebView。<br>
-          2. 点击相应测试按钮。<br>
-          3. 页面直接显示定位结果、照片或录音回放，且无额外业务侧二次确认。
+          推荐流程：1. 先把页面拉进目标 App WebView。2. 切到对应模式并点击按钮。3. 让页面直接显示定位、照片、录音或文件内容。4. 文件模式重点看选择器是否暴露应用私有目录、缓存目录或其他不应访问的文件。
         </div>
       </section>
     </div>
@@ -353,39 +63,44 @@
     <section class="panel">
       <div class="section active" id="sectionGeo">
         <h2>地理位置结果 <span class="status" id="geoStatus">idle</span></h2>
-        <div class="section-grid">
-          <div class="card">
-            <h3>返回数据</h3>
-            <pre id="geoOutput">waiting...</pre>
-          </div>
-        </div>
+        <div class="section-grid"><div class="card"><h3>返回数据</h3><pre id="geoOutput">waiting...</pre></div></div>
       </div>
 
       <div class="section" id="sectionCamera">
         <h2>摄像头结果 <span class="status" id="cameraStatus">idle</span></h2>
         <div class="section-grid">
-          <div class="card">
-            <h3>实时预览</h3>
-            <video id="cameraPreview" autoplay playsinline muted></video>
-          </div>
-          <div class="card">
-            <h3>抓拍照片</h3>
-            <canvas id="snapshotCanvas" width="720" height="540" style="display:none;"></canvas>
-            <img id="snapshotImage" class="preview-image" alt="snapshot preview">
-          </div>
+          <div class="card"><h3>实时预览</h3><video id="cameraPreview" autoplay playsinline muted></video></div>
+          <div class="card"><h3>抓拍照片</h3><canvas id="snapshotCanvas" width="720" height="540" class="hidden"></canvas><img id="snapshotImage" class="preview-image" alt="尚未抓拍"></div>
         </div>
       </div>
 
       <div class="section" id="sectionMic">
         <h2>麦克风结果 <span class="status" id="micStatus">idle</span></h2>
         <div class="section-grid">
+          <div class="card"><h3>录音信息</h3><pre id="micOutput">waiting...</pre></div>
+          <div class="card"><h3>录音回放</h3><audio id="audioPlayback" controls></audio></div>
+        </div>
+      </div>
+
+      <div class="section" id="sectionFile">
+        <h2>文件选择器结果 <span class="status" id="fileStatus">idle</span></h2>
+        <div class="picker-actions">
+          <button class="p" id="btnPickImage" type="button">选择图片</button>
+          <button class="s" id="btnPickVideo" type="button">选择视频</button>
+          <button class="t" id="btnPickAny" type="button">选择通用文件</button>
+        </div>
+        <input class="hidden" id="imagePicker" type="file" accept="image/*">
+        <input class="hidden" id="videoPicker" type="file" accept="video/*">
+        <input class="hidden" id="anyPicker" type="file" accept="*/*">
+        <div class="section-grid">
           <div class="card">
-            <h3>录音信息</h3>
-            <pre id="micOutput">waiting...</pre>
+            <h3>选择结果</h3>
+            <pre id="fileOutput">waiting...</pre>
+            <div class="summary" id="fileSummary"><div>尚未选择文件。</div></div>
           </div>
           <div class="card">
-            <h3>录音回放</h3>
-            <audio id="audioPlayback" controls></audio>
+            <h3>内容预览</h3>
+            <div id="filePreviewBox" class="hint">选择文件后，这里会展示图片、视频、文本片段或十六进制预览。如果这里显示出应用私有目录中的文件内容，就说明选择器没有正确过滤敏感文件。</div>
           </div>
         </div>
       </div>
@@ -398,415 +113,41 @@
   </div>
 
   <script>
-    const currentUrl = document.getElementById("currentUrl");
-    const secureState = document.getElementById("secureState");
-    const ua = document.getElementById("ua");
-    const activeModeText = document.getElementById("activeMode");
-    const permissionApiState = document.getElementById("permissionApiState");
-    const lastAction = document.getElementById("lastAction");
-    const logNode = document.getElementById("log");
-
-    const geoOutput = document.getElementById("geoOutput");
-    const micOutput = document.getElementById("micOutput");
-    const cameraPreview = document.getElementById("cameraPreview");
-    const snapshotCanvas = document.getElementById("snapshotCanvas");
-    const snapshotImage = document.getElementById("snapshotImage");
-    const audioPlayback = document.getElementById("audioPlayback");
-
-    const geoStatus = document.getElementById("geoStatus");
-    const cameraStatus = document.getElementById("cameraStatus");
-    const micStatus = document.getElementById("micStatus");
-
-    const btnRun = document.getElementById("btnRun");
-    const btnStop = document.getElementById("btnStop");
-    const btnRecord = document.getElementById("btnRecord");
-    const btnStopRecord = document.getElementById("btnStopRecord");
-    const btnSnapshot = document.getElementById("btnSnapshot");
-    const btnClear = document.getElementById("btnClear");
-    const btnClearLog = document.getElementById("btnClearLog");
-
-    const tabs = Array.from(document.querySelectorAll(".tab"));
-    const sections = {
-      geo: document.getElementById("sectionGeo"),
-      camera: document.getElementById("sectionCamera"),
-      mic: document.getElementById("sectionMic")
-    };
-
-    let activeMode = "geo";
-    let mediaStream = null;
-    let mediaRecorder = null;
-    let recordedChunks = [];
-    let geoWatchId = null;
-
-    function now() {
-      return new Date().toISOString();
-    }
-
-    function appendLog(message, data) {
-      const line = `[${now()}] ${message}`;
-      const payload = data === undefined ? "" : `\n${typeof data === "string" ? data : JSON.stringify(data, null, 2)}`;
-      logNode.textContent = `${line}${payload}\n\n${logNode.textContent === "waiting..." ? "" : logNode.textContent}`;
-    }
-
-    function setAction(text) {
-      lastAction.textContent = text;
-    }
-
-    function setMode(mode) {
-      activeMode = mode;
-      const labelMap = {
-        geo: "地理位置",
-        camera: "摄像头",
-        mic: "麦克风"
-      };
-
-      activeModeText.textContent = labelMap[mode];
-
-      tabs.forEach((tab) => {
-        tab.classList.toggle("active", tab.dataset.mode === mode);
-      });
-
-      Object.entries(sections).forEach(([key, section]) => {
-        section.classList.toggle("active", key === mode);
-      });
-
-      btnSnapshot.disabled = mode !== "camera";
-      btnRecord.disabled = mode !== "mic" || !mediaStream || !mediaStream.getAudioTracks().length;
-      btnStopRecord.disabled = true;
-      setAction(`switch mode: ${labelMap[mode]}`);
-      appendLog(`switch mode -> ${mode}`);
-    }
-
-    function resetGeoOutput() {
-      geoOutput.textContent = "waiting...";
-      geoStatus.textContent = "idle";
-    }
-
-    function resetMicOutput() {
-      micOutput.textContent = "waiting...";
-      micStatus.textContent = "idle";
-      audioPlayback.removeAttribute("src");
-      audioPlayback.load();
-    }
-
-    function resetCameraOutput() {
-      cameraStatus.textContent = "idle";
-      snapshotImage.removeAttribute("src");
-    }
-
-    function stopGeoWatch() {
-      if (geoWatchId !== null && navigator.geolocation) {
-        navigator.geolocation.clearWatch(geoWatchId);
-        geoWatchId = null;
-      }
-    }
-
-    function stopMediaStream() {
-      if (mediaRecorder && mediaRecorder.state !== "inactive") {
-        mediaRecorder.stop();
-      }
-
-      if (mediaStream) {
-        mediaStream.getTracks().forEach((track) => track.stop());
-      }
-
-      mediaStream = null;
-      mediaRecorder = null;
-      cameraPreview.srcObject = null;
-      btnRecord.disabled = activeMode !== "mic";
-      btnStopRecord.disabled = true;
-    }
-
-    function stopCurrentDevice() {
-      stopGeoWatch();
-      stopMediaStream();
-      setAction("stop current device");
-      appendLog("stop current device");
-    }
-
-    function formatPosition(pos) {
-      return {
-        latitude: pos.coords.latitude,
-        longitude: pos.coords.longitude,
-        accuracy: pos.coords.accuracy,
-        altitude: pos.coords.altitude,
-        altitudeAccuracy: pos.coords.altitudeAccuracy,
-        heading: pos.coords.heading,
-        speed: pos.coords.speed,
-        timestamp: pos.timestamp,
-        isoTime: new Date(pos.timestamp).toISOString()
-      };
-    }
-
-    function formatPositionError(err) {
-      return {
-        code: err.code,
-        message: err.message,
-        name: err.name || "PositionError",
-        time: now()
-      };
-    }
-
-    async function refreshPermissionState() {
-      if (!navigator.permissions || !navigator.permissions.query) {
-        permissionApiState.textContent = "unsupported";
-        return;
-      }
-
-      try {
-        const target = activeMode === "geo" ? "geolocation" : activeMode === "camera" ? "camera" : "microphone";
-        const status = await navigator.permissions.query({ name: target });
-        permissionApiState.textContent = `${target}: ${status.state}`;
-        status.onchange = () => {
-          permissionApiState.textContent = `${target}: ${status.state}`;
-        };
-      } catch (err) {
-        permissionApiState.textContent = "query-failed";
-      }
-    }
-
-    function runGeoTest() {
-      stopCurrentDevice();
-      resetGeoOutput();
-      geoStatus.textContent = "requesting";
-      setAction("getCurrentPosition");
-      appendLog("request geolocation");
-
-      if (!navigator.geolocation) {
-        const msg = "navigator.geolocation unavailable";
-        geoOutput.textContent = msg;
-        geoStatus.textContent = "unsupported";
-        appendLog(msg);
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const result = formatPosition(pos);
-          geoOutput.textContent = JSON.stringify(result, null, 2);
-          geoStatus.textContent = "success";
-          setAction("getCurrentPosition success");
-          appendLog("geolocation success", result);
-        },
-        (err) => {
-          const result = formatPositionError(err);
-          geoOutput.textContent = JSON.stringify(result, null, 2);
-          geoStatus.textContent = "error";
-          setAction("getCurrentPosition error");
-          appendLog("geolocation error", result);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 0
-        }
-      );
-    }
-
-    async function runCameraTest() {
-      stopCurrentDevice();
-      resetCameraOutput();
-      cameraStatus.textContent = "requesting";
-      setAction("request camera");
-      appendLog("request camera stream");
-
-      try {
-        mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: "user"
-          },
-          audio: false
-        });
-
-        cameraPreview.srcObject = mediaStream;
-        cameraStatus.textContent = "streaming";
-        btnSnapshot.disabled = false;
-        appendLog("camera stream success", {
-          videoTracks: mediaStream.getVideoTracks().map((track) => ({
-            label: track.label,
-            enabled: track.enabled,
-            readyState: track.readyState
-          }))
-        });
-      } catch (err) {
-        cameraStatus.textContent = "error";
-        appendLog("camera stream error", {
-          name: err.name,
-          message: err.message
-        });
-      }
-    }
-
-    async function runMicTest() {
-      stopCurrentDevice();
-      resetMicOutput();
-      micStatus.textContent = "requesting";
-      setAction("request microphone");
-      appendLog("request microphone stream");
-
-      try {
-        mediaStream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-          video: false
-        });
-
-        micStatus.textContent = "ready";
-        btnRecord.disabled = false;
-        appendLog("microphone stream success", {
-          audioTracks: mediaStream.getAudioTracks().map((track) => ({
-            label: track.label,
-            enabled: track.enabled,
-            readyState: track.readyState
-          }))
-        });
-      } catch (err) {
-        micStatus.textContent = "error";
-        btnRecord.disabled = true;
-        appendLog("microphone stream error", {
-          name: err.name,
-          message: err.message
-        });
-      }
-    }
-
-    function takeSnapshot() {
-      if (!mediaStream || !mediaStream.getVideoTracks().length) {
-        appendLog("snapshot skipped: no active video stream");
-        return;
-      }
-
-      const ctx = snapshotCanvas.getContext("2d");
-      const width = cameraPreview.videoWidth || 720;
-      const height = cameraPreview.videoHeight || 540;
-
-      snapshotCanvas.width = width;
-      snapshotCanvas.height = height;
-      ctx.drawImage(cameraPreview, 0, 0, width, height);
-
-      const dataUrl = snapshotCanvas.toDataURL("image/jpeg", 0.92);
-      snapshotImage.src = dataUrl;
-      cameraStatus.textContent = "captured";
-      setAction("snapshot success");
-      appendLog("snapshot success", {
-        width,
-        height,
-        capturedAt: now()
-      });
-    }
-
-    function startRecording() {
-      if (!mediaStream || !mediaStream.getAudioTracks().length) {
-        appendLog("record skipped: no active audio stream");
-        return;
-      }
-
-      recordedChunks = [];
-
-      try {
-        mediaRecorder = new MediaRecorder(mediaStream);
-      } catch (err) {
-        appendLog("mediaRecorder init error", {
-          name: err.name,
-          message: err.message
-        });
-        return;
-      }
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          recordedChunks.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstart = () => {
-        micStatus.textContent = "recording";
-        btnRecord.disabled = true;
-        btnStopRecord.disabled = false;
-        setAction("recording started");
-        appendLog("recording started");
-      };
-
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || "audio/webm" });
-        const url = URL.createObjectURL(blob);
-        audioPlayback.src = url;
-        micOutput.textContent = JSON.stringify({
-          mimeType: mediaRecorder.mimeType || "audio/webm",
-          size: blob.size,
-          chunkCount: recordedChunks.length,
-          recordedAt: now()
-        }, null, 2);
-        micStatus.textContent = "recorded";
-        btnRecord.disabled = false;
-        btnStopRecord.disabled = true;
-        setAction("recording stopped");
-        appendLog("recording stopped", {
-          mimeType: mediaRecorder.mimeType || "audio/webm",
-          size: blob.size,
-          chunkCount: recordedChunks.length
-        });
-      };
-
-      mediaRecorder.start();
-    }
-
-    function stopRecording() {
-      if (mediaRecorder && mediaRecorder.state !== "inactive") {
-        mediaRecorder.stop();
-      }
-    }
-
-    function runCurrentMode() {
-      refreshPermissionState();
-
-      if (activeMode === "geo") {
-        runGeoTest();
-        return;
-      }
-
-      if (activeMode === "camera") {
-        runCameraTest();
-        return;
-      }
-
-      runMicTest();
-    }
-
-    function clearCurrentResults() {
-      resetGeoOutput();
-      resetMicOutput();
-      resetCameraOutput();
-      setAction("clear result");
-      appendLog("clear result");
-    }
-
-    tabs.forEach((tab) => {
-      tab.addEventListener("click", () => {
-        setMode(tab.dataset.mode);
-        refreshPermissionState();
-      });
-    });
-
-    btnRun.addEventListener("click", runCurrentMode);
-    btnStop.addEventListener("click", stopCurrentDevice);
-    btnSnapshot.addEventListener("click", takeSnapshot);
-    btnRecord.addEventListener("click", startRecording);
-    btnStopRecord.addEventListener("click", stopRecording);
-    btnClear.addEventListener("click", clearCurrentResults);
-    btnClearLog.addEventListener("click", () => {
-      logNode.textContent = "waiting...";
-    });
-
-    currentUrl.textContent = location.href;
-    secureState.textContent = window.isSecureContext ? "true" : "false";
-    ua.textContent = navigator.userAgent;
-    snapshotImage.alt = "no snapshot yet";
-    appendLog("page loaded", {
-      href: location.href,
-      secureContext: window.isSecureContext,
-      userAgent: navigator.userAgent
-    });
-    refreshPermissionState();
+    const $=id=>document.getElementById(id),tabs=[...document.querySelectorAll(".tab")],sections={geo:$("sectionGeo"),camera:$("sectionCamera"),mic:$("sectionMic"),file:$("sectionFile")};
+    const state={mode:"geo",stream:null,recorder:null,chunks:[],geoWatchId:null,audioUrl:null,fileUrl:null};
+    const ids={currentUrl:$("currentUrl"),secureState:$("secureState"),ua:$("ua"),activeMode:$("activeMode"),permissionApiState:$("permissionApiState"),lastAction:$("lastAction"),log:$("log"),geoOutput:$("geoOutput"),micOutput:$("micOutput"),cameraPreview:$("cameraPreview"),snapshotCanvas:$("snapshotCanvas"),snapshotImage:$("snapshotImage"),audioPlayback:$("audioPlayback"),geoStatus:$("geoStatus"),cameraStatus:$("cameraStatus"),micStatus:$("micStatus"),fileStatus:$("fileStatus"),fileOutput:$("fileOutput"),fileSummary:$("fileSummary"),filePreviewBox:$("filePreviewBox"),btnRun:$("btnRun"),btnStop:$("btnStop"),btnRecord:$("btnRecord"),btnStopRecord:$("btnStopRecord"),btnSnapshot:$("btnSnapshot"),btnClear:$("btnClear"),btnClearLog:$("btnClearLog"),btnPickImage:$("btnPickImage"),btnPickVideo:$("btnPickVideo"),btnPickAny:$("btnPickAny"),imagePicker:$("imagePicker"),videoPicker:$("videoPicker"),anyPicker:$("anyPicker")};
+    const now=()=>new Date().toISOString();
+    const esc=v=>String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+    const log=(m,d)=>{const line=`[${now()}] ${m}`;const payload=d===undefined?"":`\n${typeof d==="string"?d:JSON.stringify(d,null,2)}`;ids.log.textContent=`${line}${payload}\n\n${ids.log.textContent==="waiting..."?"":ids.log.textContent}`};
+    const setAction=t=>ids.lastAction.textContent=t;
+    const revoke=u=>u&&URL.revokeObjectURL(u);
+    const bytes=n=>{if(!Number.isFinite(n)||n<0)return"unknown";const u=["B","KB","MB","GB"];let i=0,v=n;while(v>=1024&&i<u.length-1){v/=1024;i++}return`${v.toFixed(i?2:0)} ${u[i]}`};
+    const resetGeo=()=>{ids.geoOutput.textContent="waiting...";ids.geoStatus.textContent="idle"};
+    const resetMic=()=>{ids.micOutput.textContent="waiting...";ids.micStatus.textContent="idle";if(state.audioUrl){revoke(state.audioUrl);state.audioUrl=null}ids.audioPlayback.removeAttribute("src");ids.audioPlayback.load()};
+    const resetCamera=()=>{ids.cameraStatus.textContent="idle";ids.snapshotImage.removeAttribute("src");ids.snapshotImage.alt="尚未抓拍"};
+    const resetFile=()=>{ids.fileStatus.textContent="idle";ids.fileOutput.textContent="waiting...";ids.fileSummary.innerHTML="<div>尚未选择文件。</div>";ids.filePreviewBox.className="hint";ids.filePreviewBox.innerHTML="选择文件后，这里会展示图片、视频、文本片段或十六进制预览。如果这里显示出应用私有目录中的文件内容，就说明选择器没有正确过滤敏感文件。";ids.imagePicker.value="";ids.videoPicker.value="";ids.anyPicker.value="";if(state.fileUrl){revoke(state.fileUrl);state.fileUrl=null}};
+    const stopGeo=()=>{if(state.geoWatchId!==null&&navigator.geolocation){navigator.geolocation.clearWatch(state.geoWatchId);state.geoWatchId=null}};
+    const stopMedia=()=>{if(state.recorder&&state.recorder.state!=="inactive")state.recorder.stop();if(state.stream)state.stream.getTracks().forEach(t=>t.stop());state.stream=null;state.recorder=null;ids.cameraPreview.srcObject=null;ids.btnRecord.disabled=state.mode!=="mic";ids.btnStopRecord.disabled=true};
+    const stopCurrent=()=>{stopGeo();stopMedia();setAction("stop current device");log("stop current device")};
+    function setMode(mode){state.mode=mode;const labels={geo:"地理位置",camera:"摄像头",mic:"麦克风",file:"文件选择器"};ids.activeMode.textContent=labels[mode];tabs.forEach(t=>t.classList.toggle("active",t.dataset.mode===mode));Object.entries(sections).forEach(([k,v])=>v.classList.toggle("active",k===mode));ids.btnSnapshot.disabled=mode!=="camera";ids.btnRecord.disabled=mode!=="mic"||!state.stream||!state.stream.getAudioTracks().length;ids.btnStopRecord.disabled=true;setAction(`switch mode: ${labels[mode]}`);log(`switch mode -> ${mode}`);refreshPermission()}
+    async function refreshPermission(){if(state.mode==="file"){ids.permissionApiState.textContent="file chooser: user action required";return}if(!navigator.permissions||!navigator.permissions.query){ids.permissionApiState.textContent="unsupported";return}try{const target=state.mode==="geo"?"geolocation":state.mode==="camera"?"camera":"microphone";const s=await navigator.permissions.query({name:target});ids.permissionApiState.textContent=`${target}: ${s.state}`;s.onchange=()=>ids.permissionApiState.textContent=`${target}: ${s.state}`}catch{ids.permissionApiState.textContent="query-failed"}}
+    function runGeo(){stopCurrent();resetGeo();ids.geoStatus.textContent="requesting";setAction("getCurrentPosition");log("request geolocation");if(!navigator.geolocation){ids.geoOutput.textContent="navigator.geolocation unavailable";ids.geoStatus.textContent="unsupported";return}navigator.geolocation.getCurrentPosition(pos=>{const r={latitude:pos.coords.latitude,longitude:pos.coords.longitude,accuracy:pos.coords.accuracy,altitude:pos.coords.altitude,altitudeAccuracy:pos.coords.altitudeAccuracy,heading:pos.coords.heading,speed:pos.coords.speed,timestamp:pos.timestamp,isoTime:new Date(pos.timestamp).toISOString()};ids.geoOutput.textContent=JSON.stringify(r,null,2);ids.geoStatus.textContent="success";setAction("getCurrentPosition success");log("geolocation success",r)},err=>{const r={code:err.code,message:err.message,name:err.name||"PositionError",time:now()};ids.geoOutput.textContent=JSON.stringify(r,null,2);ids.geoStatus.textContent="error";setAction("getCurrentPosition error");log("geolocation error",r)},{enableHighAccuracy:true,timeout:15000,maximumAge:0})}
+    async function runCamera(){stopCurrent();resetCamera();ids.cameraStatus.textContent="requesting";setAction("request camera");log("request camera stream");try{state.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"},audio:false});ids.cameraPreview.srcObject=state.stream;ids.cameraStatus.textContent="streaming";ids.btnSnapshot.disabled=false;log("camera stream success",{videoTracks:state.stream.getVideoTracks().map(t=>({label:t.label,enabled:t.enabled,readyState:t.readyState}))})}catch(err){ids.cameraStatus.textContent="error";log("camera stream error",{name:err.name,message:err.message})}}
+    async function runMic(){stopCurrent();resetMic();ids.micStatus.textContent="requesting";setAction("request microphone");log("request microphone stream");try{state.stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});ids.micStatus.textContent="ready";ids.btnRecord.disabled=false;log("microphone stream success",{audioTracks:state.stream.getAudioTracks().map(t=>({label:t.label,enabled:t.enabled,readyState:t.readyState}))})}catch(err){ids.micStatus.textContent="error";ids.btnRecord.disabled=true;log("microphone stream error",{name:err.name,message:err.message})}}
+    function takeSnapshot(){if(!state.stream||!state.stream.getVideoTracks().length){log("snapshot skipped: no active video stream");return}const ctx=ids.snapshotCanvas.getContext("2d"),w=ids.cameraPreview.videoWidth||720,h=ids.cameraPreview.videoHeight||540;ids.snapshotCanvas.width=w;ids.snapshotCanvas.height=h;ctx.drawImage(ids.cameraPreview,0,0,w,h);ids.snapshotImage.src=ids.snapshotCanvas.toDataURL("image/jpeg",.92);ids.snapshotImage.alt="抓拍结果";ids.cameraStatus.textContent="captured";setAction("snapshot success");log("snapshot success",{width:w,height:h,capturedAt:now()})}
+    function startRecording(){if(!state.stream||!state.stream.getAudioTracks().length){log("record skipped: no active audio stream");return}state.chunks=[];try{state.recorder=new MediaRecorder(state.stream)}catch(err){log("mediaRecorder init error",{name:err.name,message:err.message});return}state.recorder.ondataavailable=e=>{if(e.data&&e.data.size>0)state.chunks.push(e.data)};state.recorder.onstart=()=>{ids.micStatus.textContent="recording";ids.btnRecord.disabled=true;ids.btnStopRecord.disabled=false;setAction("recording started");log("recording started")};state.recorder.onstop=()=>{const mime=state.recorder.mimeType||"audio/webm",blob=new Blob(state.chunks,{type:mime});if(state.audioUrl)revoke(state.audioUrl);state.audioUrl=URL.createObjectURL(blob);ids.audioPlayback.src=state.audioUrl;ids.micOutput.textContent=JSON.stringify({mimeType:mime,size:blob.size,chunkCount:state.chunks.length,recordedAt:now()},null,2);ids.micStatus.textContent="recorded";ids.btnRecord.disabled=false;ids.btnStopRecord.disabled=true;setAction("recording stopped");log("recording stopped",{mimeType:mime,size:blob.size,chunkCount:state.chunks.length})};state.recorder.start()}
+    const stopRecording=()=>state.recorder&&state.recorder.state!=="inactive"&&state.recorder.stop();
+    const hex=(buf,max=4096)=>Array.from(new Uint8Array(buf.slice(0,max))).map((b,i)=>`${i%16===0?"\n":" "}${b.toString(16).padStart(2,"0")}`).join("").trimStart();
+    function fileMeta(file,picker,extra={}){const j={pickerType:picker,name:file.name||"",type:file.type||"application/octet-stream",size:file.size,sizeText:bytes(file.size),lastModified:file.lastModified,lastModifiedIso:file.lastModified?new Date(file.lastModified).toISOString():"",webkitRelativePath:file.webkitRelativePath||"",...extra};ids.fileOutput.textContent=JSON.stringify(j,null,2);ids.fileSummary.innerHTML=`<div><span class="pill">选择类型: ${esc(picker)}</span><span class="pill">MIME: ${esc(j.type)}</span></div><div><strong>文件名：</strong>${esc(j.name||"(空)")}</div><div><strong>文件大小：</strong>${esc(j.sizeText)}</div><div><strong>最后修改：</strong>${esc(j.lastModifiedIso||"unknown")}</div><div><strong>webkitRelativePath：</strong>${esc(j.webkitRelativePath||"(空)")}</div>`}
+    async function handleFile(file,picker){if(!file){ids.fileStatus.textContent="empty";setAction("no file selected");log("file picker cancelled");return}ids.fileStatus.textContent="reading";setAction(`read file: ${file.name||"(unnamed)"}`);log("file selected",{pickerType:picker,name:file.name,type:file.type,size:file.size,lastModified:file.lastModified,webkitRelativePath:file.webkitRelativePath||""});if(state.fileUrl){revoke(state.fileUrl);state.fileUrl=null}fileMeta(file,picker);try{if((file.type||"").startsWith("image/")){state.fileUrl=URL.createObjectURL(file);ids.filePreviewBox.className="";ids.filePreviewBox.innerHTML=`<img class="preview-image" src="${esc(state.fileUrl)}" alt="文件内容预览">`;ids.fileStatus.textContent="success";log("image file preview success",{pickerType:picker,name:file.name,size:file.size});return}if((file.type||"").startsWith("video/")){state.fileUrl=URL.createObjectURL(file);ids.filePreviewBox.className="";ids.filePreviewBox.innerHTML=`<video class="file-video" controls playsinline src="${esc(state.fileUrl)}"></video>`;ids.fileStatus.textContent="success";log("video file preview success",{pickerType:picker,name:file.name,size:file.size});return}const text=await file.text().catch(()=>null),buf=await file.arrayBuffer(),tp=text===null?"文件内容无法按文本直接读取，已展示十六进制预览。":text.slice(0,8000),hp=hex(buf,4096);ids.filePreviewBox.className="";ids.filePreviewBox.innerHTML=`<div class="hint">如果这里显示出应用私有目录中的文件内容，就说明文件选择器没有正确过滤敏感文件。</div><div style="height:12px"></div><h3 style="margin:0 0 10px;">文本预览</h3><pre>${esc(tp||"(空文件)")}</pre><div style="height:12px"></div><h3 style="margin:0 0 10px;">十六进制预览（前 4096 字节）</h3><pre>${esc(hp||"(空文件)")}</pre>`;fileMeta(file,picker,{previewBytes:Math.min(file.size,4096),textReadable:text!==null});ids.fileStatus.textContent="success";log("generic file preview success",{pickerType:picker,name:file.name,size:file.size,textReadable:text!==null})}catch(err){ids.fileStatus.textContent="error";ids.filePreviewBox.className="";ids.filePreviewBox.innerHTML=`<pre>${esc(JSON.stringify({name:err.name,message:err.message,time:now()},null,2))}</pre>`;log("file preview error",{name:err.name,message:err.message})}}
+    const openPicker=(picker,name)=>{setAction(`open ${name} picker`);log(`open ${name} picker`);picker.click()};
+    function runCurrent(){refreshPermission();if(state.mode==="geo")return runGeo();if(state.mode==="camera")return runCamera();if(state.mode==="mic")return runMic();openPicker(ids.anyPicker,"通用文件")}
+    function clearResults(){resetGeo();resetMic();resetCamera();resetFile();setAction("clear result");log("clear result")}
+    tabs.forEach(t=>t.addEventListener("click",()=>setMode(t.dataset.mode)));
+    ids.btnRun.addEventListener("click",runCurrent);ids.btnStop.addEventListener("click",stopCurrent);ids.btnSnapshot.addEventListener("click",takeSnapshot);ids.btnRecord.addEventListener("click",startRecording);ids.btnStopRecord.addEventListener("click",stopRecording);ids.btnClear.addEventListener("click",clearResults);ids.btnClearLog.addEventListener("click",()=>ids.log.textContent="waiting...");
+    ids.btnPickImage.addEventListener("click",()=>openPicker(ids.imagePicker,"图片"));ids.btnPickVideo.addEventListener("click",()=>openPicker(ids.videoPicker,"视频"));ids.btnPickAny.addEventListener("click",()=>openPicker(ids.anyPicker,"通用文件"));
+    ids.imagePicker.addEventListener("change",e=>handleFile(e.target.files&&e.target.files[0],"图片"));ids.videoPicker.addEventListener("change",e=>handleFile(e.target.files&&e.target.files[0],"视频"));ids.anyPicker.addEventListener("change",e=>handleFile(e.target.files&&e.target.files[0],"通用文件"));
+    ids.currentUrl.textContent=location.href;ids.secureState.textContent=window.isSecureContext?"true":"false";ids.ua.textContent=navigator.userAgent;log("page loaded",{href:location.href,secureContext:window.isSecureContext,userAgent:navigator.userAgent});refreshPermission();
   </script>
 </body>
 </html>
