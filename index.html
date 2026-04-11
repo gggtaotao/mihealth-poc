@@ -1,153 +1,242 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WebView 通用能力测试页</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>jr WebFragment / MiFiJsBridge PoC</title>
   <style>
-    :root{--bg:#efe7da;--paper:rgba(255,250,242,.96);--ink:#241d18;--muted:#71675f;--border:#d8c7b1;--a:#bf552d;--b:#2e7869;--c:#305f95;--d:#992f2f;--shadow:rgba(66,43,24,.08);--dark:#171311}
-    *{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);background:radial-gradient(circle at top left,#f4dbc0 0,transparent 24%),radial-gradient(circle at top right,#d6ece5 0,transparent 22%),linear-gradient(180deg,#f7f0e4 0%,#efe7da 100%)}
-    .wrap{max-width:1120px;margin:0 auto;padding:24px 16px 40px}.hero,.panel{background:var(--paper);border:1px solid var(--border);border-radius:22px;box-shadow:0 18px 45px var(--shadow)}.hero{padding:24px;margin-bottom:18px}.hero h1{margin:0 0 10px;font-size:30px}.hero p{margin:0;line-height:1.7;color:var(--muted)}
-    .grid{display:grid;grid-template-columns:1.05fr 1fr;gap:18px;margin-bottom:18px}.panel{padding:18px}.panel h2,.card h3{margin:0 0 12px}.meta-list{display:grid;gap:10px;margin:0;padding:0;list-style:none}.meta-list li,.card{padding:14px;border:1px solid var(--border);border-radius:16px;background:#fff}.label{display:block;font-size:12px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
-    .mode-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}.tab{border:1px solid var(--border);border-radius:16px;padding:14px 12px;background:#fff;cursor:pointer;text-align:left}.tab.active{background:#fff4eb;border-color:#cc916f}.tab-title{display:block;font-size:15px;font-weight:700;margin-bottom:4px}.tab-desc{display:block;font-size:12px;color:var(--muted);line-height:1.45}
-    .actions,.picker-actions{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}button{border:0;border-radius:999px;padding:12px 18px;font-size:14px;font-weight:600;color:#fff;cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}.p{background:var(--a)}.s{background:var(--b)}.t{background:var(--c)}.m{background:#7e776e}.x{background:var(--d)}
-    .hint{padding:14px 16px;border-left:5px solid var(--a);border-radius:14px;background:#fff1e8;color:#6a3a22;line-height:1.65}.section{display:none;margin-top:16px}.section.active{display:block}.section-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
-    pre,video,canvas,audio,.preview-image,.file-video{width:100%;border-radius:14px;background:#0f0d0c}.preview-image,.file-video{display:block;min-height:230px;object-fit:contain;border:1px dashed #56483d}.preview-image{background:var(--dark)}video,canvas{min-height:230px;object-fit:cover}
-    .mono{font-family:Consolas,"SFMono-Regular",Menlo,monospace;font-size:12px;line-height:1.6}pre{margin:0;white-space:pre-wrap;word-break:break-word;max-height:360px;overflow:auto;padding:16px;border:1px solid #3f372f;color:#f7f2eb}.status,.pill{display:inline-block;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700}.status{background:#ece4d8;color:#584d45}.pill{background:#f0e6da;color:#5a4a3d;margin-right:8px;margin-bottom:8px}.log-panel{margin-top:18px}.hidden{display:none}.summary{display:grid;gap:8px;margin-top:12px;color:var(--muted);font-size:13px;line-height:1.6}
-    @media (max-width:860px){.grid{grid-template-columns:1fr}}@media (max-width:720px){.mode-tabs{grid-template-columns:1fr 1fr}}@media (max-width:520px){.mode-tabs{grid-template-columns:1fr}.hero h1{font-size:26px}}
+    :root{
+      --bg:#0b1220;--panel:#131c2e;--line:#263552;--text:#edf3ff;--muted:#9eb1d3;
+      --ok:#16c784;--warn:#ffb020;--bad:#ff5d73;--btn:#4e9dff;--btn2:#41597e;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#0a1120,#131d31);color:var(--text);font:15px/1.45 "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+    .wrap{max-width:1100px;margin:0 auto;padding:18px}
+    .card{background:rgba(19,28,46,.96);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px;margin-bottom:14px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+    h1,h2{margin:0 0 10px}
+    p{margin:0 0 10px;color:var(--muted)}
+    label{display:block;margin:10px 0 6px;color:#c9d8f6;font-weight:700}
+    input,textarea,select{width:100%;background:#0d1524;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:11px}
+    textarea{min-height:110px;resize:vertical}
+    .row{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+    button{border:0;border-radius:999px;padding:10px 16px;font-weight:700;color:#fff;background:var(--btn);cursor:pointer}
+    button.secondary{background:var(--btn2)}
+    .status{font-size:18px;font-weight:700}
+    .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+    .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(78,157,255,.16);color:#bdd6ff;font-size:13px;margin:0 8px 8px 0}
+    pre{margin:0;white-space:pre-wrap;word-break:break-word;font:13px/1.5 Consolas,monospace}
+    .log{background:#09101c;border-radius:12px;padding:12px;max-height:460px;overflow:auto}
+    .hint{font-size:13px;color:var(--muted)}
+    .hint code{color:#d7e6ff}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <section class="hero">
-      <h1>WebView 通用能力测试页</h1>
-      <p>统一验证地理位置、摄像头、麦克风和文件选择器。结果只在当前页面展示，适合录屏、截图和手工复现。</p>
-    </section>
-
-    <div class="grid">
-      <section class="panel">
-        <h2>页面环境</h2>
-        <ul class="meta-list mono">
-          <li><span class="label">Current URL</span><span id="currentUrl">-</span></li>
-          <li><span class="label">Secure Context</span><span id="secureState">-</span></li>
-          <li><span class="label">User Agent</span><span id="ua">-</span></li>
-          <li><span class="label">Active Mode</span><span id="activeMode">地理位置</span></li>
-          <li><span class="label">Permission API</span><span id="permissionApiState">checking</span></li>
-          <li><span class="label">Last Action</span><span id="lastAction">page loaded</span></li>
-        </ul>
-      </section>
-
-      <section class="panel">
-        <h2>测试模式</h2>
-        <div class="mode-tabs">
-          <button class="tab active" data-mode="geo"><span class="tab-title">地理位置</span><span class="tab-desc">展示经纬度和精度。</span></button>
-          <button class="tab" data-mode="camera"><span class="tab-title">摄像头</span><span class="tab-desc">预览并抓拍照片。</span></button>
-          <button class="tab" data-mode="mic"><span class="tab-title">麦克风</span><span class="tab-desc">录一段音并回放。</span></button>
-          <button class="tab" data-mode="file"><span class="tab-title">文件选择器</span><span class="tab-desc">测试图片、视频和通用文件。</span></button>
-        </div>
-        <div class="actions">
-          <button class="p" id="btnRun">执行当前测试</button>
-          <button class="s" id="btnStop">停止当前设备</button>
-          <button class="t" id="btnRecord" disabled>开始录音</button>
-          <button class="s" id="btnStopRecord" disabled>停止录音</button>
-          <button class="t" id="btnSnapshot" disabled>拍照</button>
-          <button class="m" id="btnClear">清空结果</button>
-          <button class="x" id="btnClearLog">清空日志</button>
-        </div>
-        <div class="hint">
-          推荐流程：1. 先把页面拉进目标 App WebView。2. 切到对应模式并点击按钮。3. 让页面直接显示定位、照片、录音或文件内容。4. 文件模式重点看选择器是否暴露应用私有目录、缓存目录或其他不应访问的文件。
-        </div>
-      </section>
+    <div class="card">
+      <h1>jr WebFragment / MiFiJsBridge PoC</h1>
+      <p>用途：测试 <code>com.xiaomi.jr.web.WebFragment</code> 是否能加载外部页面、是否注入 <code>MiFiJsBridge</code>，以及可用的 feature/action、<code>localresource://</code> 文件读取面。</p>
+      <div id="status" class="status warn">状态：等待 MiFiJsBridge 注入...</div>
+      <div class="row" style="margin-top:12px">
+        <span class="pill" id="urlPill">URL: -</span>
+        <span class="pill" id="uaPill">UA: -</span>
+      </div>
+      <p class="hint" style="margin-top:8px">
+        说明：该桥存在 <code>FeatureConfigManager</code> 域名门控。对第三方域页面，很多 action 可能返回 <code>205</code>；这恰好可以用本页直接测试。  
+      </p>
     </div>
 
-    <section class="panel">
-      <div class="section active" id="sectionGeo">
-        <h2>地理位置结果 <span class="status" id="geoStatus">idle</span></h2>
-        <div class="section-grid"><div class="card"><h3>返回数据</h3><pre id="geoOutput">waiting...</pre></div></div>
-      </div>
-
-      <div class="section" id="sectionCamera">
-        <h2>摄像头结果 <span class="status" id="cameraStatus">idle</span></h2>
-        <div class="section-grid">
-          <div class="card"><h3>实时预览</h3><video id="cameraPreview" autoplay playsinline muted></video></div>
-          <div class="card"><h3>抓拍照片</h3><canvas id="snapshotCanvas" width="720" height="540" class="hidden"></canvas><img id="snapshotImage" class="preview-image" alt="尚未抓拍"></div>
+    <div class="grid">
+      <div class="card">
+        <h2>1. 通用桥调用</h2>
+        <label for="feature">feature</label>
+        <input id="feature" value="Data">
+        <label for="action">action</label>
+        <input id="action" value="getDeviceId">
+        <label for="callback">callback 名称</label>
+        <input id="callback" value="onBridgeCallback">
+        <label for="param">param 字符串 / JSON</label>
+        <textarea id="param"></textarea>
+        <div class="row">
+          <button onclick="doLookup()">lookup</button>
+          <button onclick="doInvoke()">invoke</button>
+          <button class="secondary" onclick="doInvokeBatch()">invokeBatch</button>
         </div>
       </div>
 
-      <div class="section" id="sectionMic">
-        <h2>麦克风结果 <span class="status" id="micStatus">idle</span></h2>
-        <div class="section-grid">
-          <div class="card"><h3>录音信息</h3><pre id="micOutput">waiting...</pre></div>
-          <div class="card"><h3>录音回放</h3><audio id="audioPlayback" controls></audio></div>
+      <div class="card">
+        <h2>2. 高风险候选 API</h2>
+        <p class="hint">这些是静态审计中最值得测的 feature/action。点击后会自动填充并执行 <code>lookup</code>，可再点 <code>invoke</code>。</p>
+        <div class="row">
+          <button onclick="preset('Data','getDeviceId','')">Data.getDeviceId</button>
+          <button onclick="preset('Data','getLocation','')">Data.getLocation</button>
+          <button onclick="preset('Data','getRealtimeLocation','')">Data.getRealtimeLocation</button>
+          <button onclick="preset('System','readClipboard','')">System.readClipboard</button>
+          <button onclick="preset('Account','getUserInfo','')">Account.getUserInfo</button>
+          <button onclick="preset('Account','getPhoneNumber','')">Account.getPhoneNumber</button>
+          <button onclick="preset('Storage','saveFile', '{\"name\":\"poc\",\"data\":\"hello-from-poc\",\"format\":0,\"authorities\":[\"*\"]}')">Storage.saveFile</button>
+          <button onclick="preset('Storage','loadFile','poc')">Storage.loadFile</button>
+          <button onclick="preset('Photo','pickPhoto', '{\"photoName\":\"poc\",\"width\":0,\"height\":0,\"returnMode\":0}')">Photo.pickPhoto</button>
+          <button onclick="preset('Photo','capturePhoto', '{\"photoName\":\"poc_cam\",\"title\":\"PoC\",\"description\":\"PoC\",\"width\":0,\"height\":0,\"returnMode\":0,\"isFrontCamera\":false,\"enableSwitchFrontBackCamera\":true,\"showResult\":true}')">Photo.capturePhoto</button>
+          <button onclick="preset('Voice','startRecord','voice_poc')">Voice.startRecord</button>
+          <button onclick="preset('Permission','requestPermission','[\"android.permission.ACCESS_FINE_LOCATION\"]')">Permission.requestPermission</button>
         </div>
       </div>
 
-      <div class="section" id="sectionFile">
-        <h2>文件选择器结果 <span class="status" id="fileStatus">idle</span></h2>
-        <div class="picker-actions">
-          <button class="p" id="btnPickImage" type="button">选择图片</button>
-          <button class="s" id="btnPickVideo" type="button">选择视频</button>
-          <button class="t" id="btnPickAny" type="button">选择通用文件</button>
+      <div class="card">
+        <h2>3. localresource:// 测试</h2>
+        <p class="hint">`WebFragment.MiFiWebViewClient.interceptRequest()` 会特殊处理 <code>localresource://</code>。本页提供多种探测方式。</p>
+        <label for="localres">localresource URL</label>
+        <input id="localres" value="localresource://x/data/data/com.xiaomi.shop/shared_prefs/guarder.xml">
+        <div class="row">
+          <button onclick="testLocalresourceFetch()">fetch</button>
+          <button onclick="testLocalresourceImg()">img</button>
+          <button onclick="testLocalresourceIframe()">iframe</button>
+          <button class="secondary" onclick="testLocalresourceNav()">顶层跳转</button>
         </div>
-        <input class="hidden" id="imagePicker" type="file" accept="image/*">
-        <input class="hidden" id="videoPicker" type="file" accept="video/*">
-        <input class="hidden" id="anyPicker" type="file" accept="*/*">
-        <div class="section-grid">
-          <div class="card">
-            <h3>选择结果</h3>
-            <pre id="fileOutput">waiting...</pre>
-            <div class="summary" id="fileSummary"><div>尚未选择文件。</div></div>
-          </div>
-          <div class="card">
-            <h3>内容预览</h3>
-            <div id="filePreviewBox" class="hint">选择文件后，这里会展示图片、视频、文本片段或十六进制预览。如果这里显示出应用私有目录中的文件内容，就说明选择器没有正确过滤敏感文件。</div>
-          </div>
+        <div id="sandbox" style="display:none"></div>
+      </div>
+
+      <div class="card">
+        <h2>4. 预置回调</h2>
+        <p class="hint">有些异步 action 会通过 callback 回调，这里会统一记录。</p>
+        <div class="row">
+          <button class="secondary" onclick="checkBridge()">重新检测 bridge</button>
+          <button class="secondary" onclick="clearLog()">清空日志</button>
         </div>
       </div>
-    </section>
+    </div>
 
-    <section class="panel log-panel">
-      <h2>统一日志</h2>
-      <pre id="log">waiting...</pre>
-    </section>
+    <div class="card">
+      <h2>日志</h2>
+      <div class="log"><pre id="log"></pre></div>
+    </div>
   </div>
 
   <script>
-    const $=id=>document.getElementById(id),tabs=[...document.querySelectorAll(".tab")],sections={geo:$("sectionGeo"),camera:$("sectionCamera"),mic:$("sectionMic"),file:$("sectionFile")};
-    const state={mode:"geo",stream:null,recorder:null,chunks:[],geoWatchId:null,audioUrl:null,fileUrl:null};
-    const ids={currentUrl:$("currentUrl"),secureState:$("secureState"),ua:$("ua"),activeMode:$("activeMode"),permissionApiState:$("permissionApiState"),lastAction:$("lastAction"),log:$("log"),geoOutput:$("geoOutput"),micOutput:$("micOutput"),cameraPreview:$("cameraPreview"),snapshotCanvas:$("snapshotCanvas"),snapshotImage:$("snapshotImage"),audioPlayback:$("audioPlayback"),geoStatus:$("geoStatus"),cameraStatus:$("cameraStatus"),micStatus:$("micStatus"),fileStatus:$("fileStatus"),fileOutput:$("fileOutput"),fileSummary:$("fileSummary"),filePreviewBox:$("filePreviewBox"),btnRun:$("btnRun"),btnStop:$("btnStop"),btnRecord:$("btnRecord"),btnStopRecord:$("btnStopRecord"),btnSnapshot:$("btnSnapshot"),btnClear:$("btnClear"),btnClearLog:$("btnClearLog"),btnPickImage:$("btnPickImage"),btnPickVideo:$("btnPickVideo"),btnPickAny:$("btnPickAny"),imagePicker:$("imagePicker"),videoPicker:$("videoPicker"),anyPicker:$("anyPicker")};
-    const now=()=>new Date().toISOString();
-    const esc=v=>String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
-    const log=(m,d)=>{const line=`[${now()}] ${m}`;const payload=d===undefined?"":`\n${typeof d==="string"?d:JSON.stringify(d,null,2)}`;ids.log.textContent=`${line}${payload}\n\n${ids.log.textContent==="waiting..."?"":ids.log.textContent}`};
-    const setAction=t=>ids.lastAction.textContent=t;
-    const revoke=u=>u&&URL.revokeObjectURL(u);
-    const bytes=n=>{if(!Number.isFinite(n)||n<0)return"unknown";const u=["B","KB","MB","GB"];let i=0,v=n;while(v>=1024&&i<u.length-1){v/=1024;i++}return`${v.toFixed(i?2:0)} ${u[i]}`};
-    const resetGeo=()=>{ids.geoOutput.textContent="waiting...";ids.geoStatus.textContent="idle"};
-    const resetMic=()=>{ids.micOutput.textContent="waiting...";ids.micStatus.textContent="idle";if(state.audioUrl){revoke(state.audioUrl);state.audioUrl=null}ids.audioPlayback.removeAttribute("src");ids.audioPlayback.load()};
-    const resetCamera=()=>{ids.cameraStatus.textContent="idle";ids.snapshotImage.removeAttribute("src");ids.snapshotImage.alt="尚未抓拍"};
-    const resetFile=()=>{ids.fileStatus.textContent="idle";ids.fileOutput.textContent="waiting...";ids.fileSummary.innerHTML="<div>尚未选择文件。</div>";ids.filePreviewBox.className="hint";ids.filePreviewBox.innerHTML="选择文件后，这里会展示图片、视频、文本片段或十六进制预览。如果这里显示出应用私有目录中的文件内容，就说明选择器没有正确过滤敏感文件。";ids.imagePicker.value="";ids.videoPicker.value="";ids.anyPicker.value="";if(state.fileUrl){revoke(state.fileUrl);state.fileUrl=null}};
-    const stopGeo=()=>{if(state.geoWatchId!==null&&navigator.geolocation){navigator.geolocation.clearWatch(state.geoWatchId);state.geoWatchId=null}};
-    const stopMedia=()=>{if(state.recorder&&state.recorder.state!=="inactive")state.recorder.stop();if(state.stream)state.stream.getTracks().forEach(t=>t.stop());state.stream=null;state.recorder=null;ids.cameraPreview.srcObject=null;ids.btnRecord.disabled=state.mode!=="mic";ids.btnStopRecord.disabled=true};
-    const stopCurrent=()=>{stopGeo();stopMedia();setAction("stop current device");log("stop current device")};
-    function setMode(mode){state.mode=mode;const labels={geo:"地理位置",camera:"摄像头",mic:"麦克风",file:"文件选择器"};ids.activeMode.textContent=labels[mode];tabs.forEach(t=>t.classList.toggle("active",t.dataset.mode===mode));Object.entries(sections).forEach(([k,v])=>v.classList.toggle("active",k===mode));ids.btnSnapshot.disabled=mode!=="camera";ids.btnRecord.disabled=mode!=="mic"||!state.stream||!state.stream.getAudioTracks().length;ids.btnStopRecord.disabled=true;setAction(`switch mode: ${labels[mode]}`);log(`switch mode -> ${mode}`);refreshPermission()}
-    async function refreshPermission(){if(state.mode==="file"){ids.permissionApiState.textContent="file chooser: user action required";return}if(!navigator.permissions||!navigator.permissions.query){ids.permissionApiState.textContent="unsupported";return}try{const target=state.mode==="geo"?"geolocation":state.mode==="camera"?"camera":"microphone";const s=await navigator.permissions.query({name:target});ids.permissionApiState.textContent=`${target}: ${s.state}`;s.onchange=()=>ids.permissionApiState.textContent=`${target}: ${s.state}`}catch{ids.permissionApiState.textContent="query-failed"}}
-    function runGeo(){stopCurrent();resetGeo();ids.geoStatus.textContent="requesting";setAction("getCurrentPosition");log("request geolocation");if(!navigator.geolocation){ids.geoOutput.textContent="navigator.geolocation unavailable";ids.geoStatus.textContent="unsupported";return}navigator.geolocation.getCurrentPosition(pos=>{const r={latitude:pos.coords.latitude,longitude:pos.coords.longitude,accuracy:pos.coords.accuracy,altitude:pos.coords.altitude,altitudeAccuracy:pos.coords.altitudeAccuracy,heading:pos.coords.heading,speed:pos.coords.speed,timestamp:pos.timestamp,isoTime:new Date(pos.timestamp).toISOString()};ids.geoOutput.textContent=JSON.stringify(r,null,2);ids.geoStatus.textContent="success";setAction("getCurrentPosition success");log("geolocation success",r)},err=>{const r={code:err.code,message:err.message,name:err.name||"PositionError",time:now()};ids.geoOutput.textContent=JSON.stringify(r,null,2);ids.geoStatus.textContent="error";setAction("getCurrentPosition error");log("geolocation error",r)},{enableHighAccuracy:true,timeout:15000,maximumAge:0})}
-    async function runCamera(){stopCurrent();resetCamera();ids.cameraStatus.textContent="requesting";setAction("request camera");log("request camera stream");try{state.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"},audio:false});ids.cameraPreview.srcObject=state.stream;ids.cameraStatus.textContent="streaming";ids.btnSnapshot.disabled=false;log("camera stream success",{videoTracks:state.stream.getVideoTracks().map(t=>({label:t.label,enabled:t.enabled,readyState:t.readyState}))})}catch(err){ids.cameraStatus.textContent="error";log("camera stream error",{name:err.name,message:err.message})}}
-    async function runMic(){stopCurrent();resetMic();ids.micStatus.textContent="requesting";setAction("request microphone");log("request microphone stream");try{state.stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});ids.micStatus.textContent="ready";ids.btnRecord.disabled=false;log("microphone stream success",{audioTracks:state.stream.getAudioTracks().map(t=>({label:t.label,enabled:t.enabled,readyState:t.readyState}))})}catch(err){ids.micStatus.textContent="error";ids.btnRecord.disabled=true;log("microphone stream error",{name:err.name,message:err.message})}}
-    function takeSnapshot(){if(!state.stream||!state.stream.getVideoTracks().length){log("snapshot skipped: no active video stream");return}const ctx=ids.snapshotCanvas.getContext("2d"),w=ids.cameraPreview.videoWidth||720,h=ids.cameraPreview.videoHeight||540;ids.snapshotCanvas.width=w;ids.snapshotCanvas.height=h;ctx.drawImage(ids.cameraPreview,0,0,w,h);ids.snapshotImage.src=ids.snapshotCanvas.toDataURL("image/jpeg",.92);ids.snapshotImage.alt="抓拍结果";ids.cameraStatus.textContent="captured";setAction("snapshot success");log("snapshot success",{width:w,height:h,capturedAt:now()})}
-    function startRecording(){if(!state.stream||!state.stream.getAudioTracks().length){log("record skipped: no active audio stream");return}state.chunks=[];try{state.recorder=new MediaRecorder(state.stream)}catch(err){log("mediaRecorder init error",{name:err.name,message:err.message});return}state.recorder.ondataavailable=e=>{if(e.data&&e.data.size>0)state.chunks.push(e.data)};state.recorder.onstart=()=>{ids.micStatus.textContent="recording";ids.btnRecord.disabled=true;ids.btnStopRecord.disabled=false;setAction("recording started");log("recording started")};state.recorder.onstop=()=>{const mime=state.recorder.mimeType||"audio/webm",blob=new Blob(state.chunks,{type:mime});if(state.audioUrl)revoke(state.audioUrl);state.audioUrl=URL.createObjectURL(blob);ids.audioPlayback.src=state.audioUrl;ids.micOutput.textContent=JSON.stringify({mimeType:mime,size:blob.size,chunkCount:state.chunks.length,recordedAt:now()},null,2);ids.micStatus.textContent="recorded";ids.btnRecord.disabled=false;ids.btnStopRecord.disabled=true;setAction("recording stopped");log("recording stopped",{mimeType:mime,size:blob.size,chunkCount:state.chunks.length})};state.recorder.start()}
-    const stopRecording=()=>state.recorder&&state.recorder.state!=="inactive"&&state.recorder.stop();
-    const hex=(buf,max=4096)=>Array.from(new Uint8Array(buf.slice(0,max))).map((b,i)=>`${i%16===0?"\n":" "}${b.toString(16).padStart(2,"0")}`).join("").trimStart();
-    function fileMeta(file,picker,extra={}){const j={pickerType:picker,name:file.name||"",type:file.type||"application/octet-stream",size:file.size,sizeText:bytes(file.size),lastModified:file.lastModified,lastModifiedIso:file.lastModified?new Date(file.lastModified).toISOString():"",webkitRelativePath:file.webkitRelativePath||"",...extra};ids.fileOutput.textContent=JSON.stringify(j,null,2);ids.fileSummary.innerHTML=`<div><span class="pill">选择类型: ${esc(picker)}</span><span class="pill">MIME: ${esc(j.type)}</span></div><div><strong>文件名：</strong>${esc(j.name||"(空)")}</div><div><strong>文件大小：</strong>${esc(j.sizeText)}</div><div><strong>最后修改：</strong>${esc(j.lastModifiedIso||"unknown")}</div><div><strong>webkitRelativePath：</strong>${esc(j.webkitRelativePath||"(空)")}</div>`}
-    async function handleFile(file,picker){if(!file){ids.fileStatus.textContent="empty";setAction("no file selected");log("file picker cancelled");return}ids.fileStatus.textContent="reading";setAction(`read file: ${file.name||"(unnamed)"}`);log("file selected",{pickerType:picker,name:file.name,type:file.type,size:file.size,lastModified:file.lastModified,webkitRelativePath:file.webkitRelativePath||""});if(state.fileUrl){revoke(state.fileUrl);state.fileUrl=null}fileMeta(file,picker);try{if((file.type||"").startsWith("image/")){state.fileUrl=URL.createObjectURL(file);ids.filePreviewBox.className="";ids.filePreviewBox.innerHTML=`<img class="preview-image" src="${esc(state.fileUrl)}" alt="文件内容预览">`;ids.fileStatus.textContent="success";log("image file preview success",{pickerType:picker,name:file.name,size:file.size});return}if((file.type||"").startsWith("video/")){state.fileUrl=URL.createObjectURL(file);ids.filePreviewBox.className="";ids.filePreviewBox.innerHTML=`<video class="file-video" controls playsinline src="${esc(state.fileUrl)}"></video>`;ids.fileStatus.textContent="success";log("video file preview success",{pickerType:picker,name:file.name,size:file.size});return}const text=await file.text().catch(()=>null),buf=await file.arrayBuffer(),tp=text===null?"文件内容无法按文本直接读取，已展示十六进制预览。":text.slice(0,8000),hp=hex(buf,4096);ids.filePreviewBox.className="";ids.filePreviewBox.innerHTML=`<div class="hint">如果这里显示出应用私有目录中的文件内容，就说明文件选择器没有正确过滤敏感文件。</div><div style="height:12px"></div><h3 style="margin:0 0 10px;">文本预览</h3><pre>${esc(tp||"(空文件)")}</pre><div style="height:12px"></div><h3 style="margin:0 0 10px;">十六进制预览（前 4096 字节）</h3><pre>${esc(hp||"(空文件)")}</pre>`;fileMeta(file,picker,{previewBytes:Math.min(file.size,4096),textReadable:text!==null});ids.fileStatus.textContent="success";log("generic file preview success",{pickerType:picker,name:file.name,size:file.size,textReadable:text!==null})}catch(err){ids.fileStatus.textContent="error";ids.filePreviewBox.className="";ids.filePreviewBox.innerHTML=`<pre>${esc(JSON.stringify({name:err.name,message:err.message,time:now()},null,2))}</pre>`;log("file preview error",{name:err.name,message:err.message})}}
-    const openPicker=(picker,name)=>{setAction(`open ${name} picker`);log(`open ${name} picker`);picker.click()};
-    function runCurrent(){refreshPermission();if(state.mode==="geo")return runGeo();if(state.mode==="camera")return runCamera();if(state.mode==="mic")return runMic();openPicker(ids.anyPicker,"通用文件")}
-    function clearResults(){resetGeo();resetMic();resetCamera();resetFile();setAction("clear result");log("clear result")}
-    tabs.forEach(t=>t.addEventListener("click",()=>setMode(t.dataset.mode)));
-    ids.btnRun.addEventListener("click",runCurrent);ids.btnStop.addEventListener("click",stopCurrent);ids.btnSnapshot.addEventListener("click",takeSnapshot);ids.btnRecord.addEventListener("click",startRecording);ids.btnStopRecord.addEventListener("click",stopRecording);ids.btnClear.addEventListener("click",clearResults);ids.btnClearLog.addEventListener("click",()=>ids.log.textContent="waiting...");
-    ids.btnPickImage.addEventListener("click",()=>openPicker(ids.imagePicker,"图片"));ids.btnPickVideo.addEventListener("click",()=>openPicker(ids.videoPicker,"视频"));ids.btnPickAny.addEventListener("click",()=>openPicker(ids.anyPicker,"通用文件"));
-    ids.imagePicker.addEventListener("change",e=>handleFile(e.target.files&&e.target.files[0],"图片"));ids.videoPicker.addEventListener("change",e=>handleFile(e.target.files&&e.target.files[0],"视频"));ids.anyPicker.addEventListener("change",e=>handleFile(e.target.files&&e.target.files[0],"通用文件"));
-    ids.currentUrl.textContent=location.href;ids.secureState.textContent=window.isSecureContext?"true":"false";ids.ua.textContent=navigator.userAgent;log("page loaded",{href:location.href,secureContext:window.isSecureContext,userAgent:navigator.userAgent});refreshPermission();
+    function ts(){ return new Date().toLocaleString(); }
+    function safe(v){
+      if(v === undefined) return "undefined";
+      if(v === null) return "null";
+      if(typeof v === "string") return v;
+      try { return JSON.stringify(v); } catch(e) { return String(v); }
+    }
+    function log(msg){
+      const el = document.getElementById("log");
+      el.textContent += `[${ts()}] ${msg}\n`;
+      el.parentElement.scrollTop = el.parentElement.scrollHeight;
+      console.log(msg);
+    }
+    function clearLog(){
+      document.getElementById("log").textContent = "";
+      log("log cleared");
+    }
+    function ready(){
+      return !!(window.MiFiJsBridge &&
+        typeof MiFiJsBridge.lookup === "function" &&
+        typeof MiFiJsBridge.invoke === "function");
+    }
+    function checkBridge(){
+      document.getElementById("urlPill").textContent = "URL: " + location.href;
+      document.getElementById("uaPill").textContent = "UA: " + navigator.userAgent;
+      const status = document.getElementById("status");
+      if(ready()){
+        status.className = "status ok";
+        status.textContent = "状态：MiFiJsBridge 已注入";
+        log("MiFiJsBridge detected");
+      } else {
+        status.className = "status bad";
+        status.textContent = "状态：MiFiJsBridge 不存在";
+        log("MiFiJsBridge missing");
+      }
+    }
+    function feature(){ return document.getElementById("feature").value.trim(); }
+    function action(){ return document.getElementById("action").value.trim(); }
+    function callback(){ return document.getElementById("callback").value.trim(); }
+    function param(){ return document.getElementById("param").value; }
+
+    function doLookup(){
+      if(!ready()){ checkBridge(); return; }
+      try{
+        const ret = MiFiJsBridge.lookup(feature(), action());
+        log(`lookup(${feature()}, ${action()}) => ${safe(ret)}`);
+        return ret;
+      }catch(e){
+        log(`lookup threw: ${e}`);
+      }
+    }
+    function doInvoke(){
+      if(!ready()){ checkBridge(); return; }
+      try{
+        const ret = MiFiJsBridge.invoke(feature(), action(), callback(), param());
+        log(`invoke(${feature()}, ${action()}, ${callback()}, ${safe(param())}) => ${safe(ret)}`);
+        return ret;
+      }catch(e){
+        log(`invoke threw: ${e}`);
+      }
+    }
+    function doInvokeBatch(){
+      if(!ready()){ checkBridge(); return; }
+      try{
+        const body = {};
+        body[feature()] = [action()];
+        const ret = MiFiJsBridge.invokeBatch(JSON.stringify(body));
+        log(`invokeBatch(${JSON.stringify(body)}) => ${safe(ret)}`);
+      }catch(e){
+        log(`invokeBatch threw: ${e}`);
+      }
+    }
+    function preset(f,a,p){
+      document.getElementById("feature").value = f;
+      document.getElementById("action").value = a;
+      document.getElementById("param").value = p || "";
+      doLookup();
+    }
+
+    function onBridgeCallback(resp){ log(`onBridgeCallback => ${safe(resp)}`); }
+    function onCallback(resp){ log(`onCallback => ${safe(resp)}`); }
+    function callback(resp){ log(`callback => ${safe(resp)}`); }
+
+    function localres(){ return document.getElementById("localres").value.trim(); }
+    async function testLocalresourceFetch(){
+      const url = localres();
+      try{
+        const r = await fetch(url);
+        const t = await r.text();
+        log(`fetch(${url}) status=${r.status} len=${t.length} body=${t.slice(0,300)}`);
+      }catch(e){
+        log(`fetch(${url}) threw: ${e}`);
+      }
+    }
+    function testLocalresourceImg(){
+      const url = localres();
+      const img = new Image();
+      img.onload = () => log(`img(${url}) loaded width=${img.width} height=${img.height}`);
+      img.onerror = (e) => log(`img(${url}) error`);
+      img.src = url;
+      document.getElementById("sandbox").appendChild(img);
+      log(`img request sent => ${url}`);
+    }
+    function testLocalresourceIframe(){
+      const url = localres();
+      const iframe = document.createElement("iframe");
+      iframe.onload = () => log(`iframe(${url}) loaded`);
+      iframe.onerror = () => log(`iframe(${url}) error`);
+      iframe.src = url;
+      document.getElementById("sandbox").appendChild(iframe);
+      log(`iframe request sent => ${url}`);
+    }
+    function testLocalresourceNav(){
+      const url = localres();
+      log(`navigating to ${url}`);
+      location.href = url;
+    }
+
+    window.addEventListener("load", function(){
+      log("page loaded");
+      checkBridge();
+      setTimeout(checkBridge, 1000);
+    });
   </script>
 </body>
 </html>
