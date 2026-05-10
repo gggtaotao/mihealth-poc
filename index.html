@@ -161,7 +161,9 @@ function escapeXmlText(s) {
   return String(s)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
 }
 
 function buildFreshHybridStorageXml(path, format) {
@@ -170,38 +172,45 @@ function buildFreshHybridStorageXml(path, format) {
   return `<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<map>\n    <string name='${nameEsc}'>${metaEsc}</string>\n</map>`;
 }
 
+function parseHybridStorageEntries(existingXml) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(existingXml, 'application/xml');
+  if (doc.getElementsByTagName('parsererror').length > 0) {
+    throw new Error('parsererror');
+  }
+  const mapNode = doc.getElementsByTagName('map')[0];
+  if (!mapNode) {
+    throw new Error('missing <map>');
+  }
+  const entries = {};
+  const list = Array.from(mapNode.getElementsByTagName('string'));
+  for (const node of list) {
+    const k = node.getAttribute('name');
+    if (k) entries[k] = node.textContent || '';
+  }
+  return entries;
+}
+
+function renderHybridStorageXml(entries) {
+  const keys = Object.keys(entries);
+  keys.sort();
+  const lines = [];
+  lines.push(`<?xml version='1.0' encoding='utf-8' standalone='yes' ?>`);
+  lines.push(`<map>`);
+  for (const k of keys) {
+    const nameEsc = escapeXmlAttr(k);
+    const valEsc = escapeXmlText(entries[k]);
+    lines.push(`    <string name='${nameEsc}'>${valEsc}</string>`);
+  }
+  lines.push(`</map>`);
+  return lines.join('\n');
+}
+
 function mergeHybridStorageXml(existingXml, path, format) {
   try {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(existingXml, 'application/xml');
-    if (doc.getElementsByTagName('parsererror').length > 0) {
-      throw new Error('parsererror');
-    }
-
-    let map = doc.getElementsByTagName('map')[0];
-    if (!map) {
-      map = doc.createElement('map');
-      while (doc.firstChild) doc.removeChild(doc.firstChild);
-      doc.appendChild(map);
-    }
-
-    const strings = Array.from(map.getElementsByTagName('string'));
-    for (const node of strings) {
-      if (node.getAttribute('name') === path) {
-        map.removeChild(node);
-      }
-    }
-
-    const n = doc.createElement('string');
-    n.setAttribute('name', path);
-    n.textContent = metaValue(format);
-    map.appendChild(n);
-
-    let xml = new XMLSerializer().serializeToString(doc);
-    if (!xml.startsWith('<?xml')) {
-      xml = `<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n` + xml;
-    }
-    return xml;
+    const entries = parseHybridStorageEntries(existingXml);
+    entries[path] = metaValue(format);
+    return renderHybridStorageXml(entries);
   } catch (e) {
     log('merge 失败，使用全新模板写入 hybrid_storage.xml: ' + e.message);
     return buildFreshHybridStorageXml(path, format);
