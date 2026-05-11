@@ -15,6 +15,7 @@
   <input id="url" placeholder="Passport 页面 URL" />
   <input id="cookieUrl" placeholder="cookie_set_url" />
   <input id="sid" value="passportapi" placeholder="login_service_id" />
+  <button onclick="testGate()">0) 测试桥可用性（getClientInfo + Settings）</button>
   <button onclick="launch()">1) 拉起 PassportJsbWebViewActivity</button>
   <button onclick="showCookie()">2) 读取 document.cookie</button>
   <pre id="log"></pre>
@@ -33,12 +34,30 @@ function launch(){
   const u=document.getElementById('url').value.trim();
   const cu=document.getElementById('cookieUrl').value.trim();
   const sid=document.getElementById('sid').value.trim();
-  const intent='intent:#Intent;action=android.intent.action.VIEW;component=com.duokan.reader/com.xiaomi.passport.ui.internal.PassportJsbWebViewActivity;S.url='+esc(u)+';S.cookie_fill_cookie_set_url='+esc(cu)+';S.cookie_fill_account_device_params=true;S.cookie_fill_login_service_id='+esc(sid)+';S.action_bar_style=none;end';
+  const intent='intent:#Intent;component=com.duokan.reader/com.xiaomi.passport.ui.internal.PassportJsbWebViewActivity;S.url='+esc(u)+';S.cookie_fill_cookie_set_url='+esc(cu)+';S.cookie_fill_account_device_params=true;S.cookie_fill_login_service_id='+esc(sid)+';S.action_bar_style=none;end';
   try{
     const ok=Dk.openIntentWithUri(intent);
     log('openIntentWithUri =>', ok);
     log('intent =', intent);
   }catch(e){ log('ERR', e.message); }
+}
+
+function testGate(){
+  try{
+    if(!window.Dk){ log('window.Dk 不存在'); return; }
+    if(Dk.getClientInfo){
+      const ci=Dk.getClientInfo();
+      log('getClientInfo =', ci);
+    }else{
+      log('getClientInfo 不存在');
+    }
+    if(Dk.openIntentWithUri){
+      const ok=Dk.openIntentWithUri('intent:#Intent;action=android.settings.SETTINGS;end');
+      log('openIntent(SETTINGS) =>', ok);
+    }else{
+      log('openIntentWithUri 不存在');
+    }
+  }catch(e){ log('testGate ERR', e.message); }
 }
 
 function showCookie(){
